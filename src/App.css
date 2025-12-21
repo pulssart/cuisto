@@ -47,18 +47,28 @@
   animation: spin 1s linear infinite;
 }
 
-.generation-message {
-  font-family: var(--font-serif);
-  font-size: 1.2rem;
+.generation-status {
+  font-size: 0.9rem;
   font-weight: 500;
-  color: var(--color-text);
-  margin: 0 0 var(--spacing-sm);
+  color: var(--color-text-light);
+  margin: 0 0 var(--spacing-lg);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.generation-hint {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
+.generation-quote {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--color-text);
   margin: 0;
+  text-align: center;
+  line-height: 1.5;
+  min-height: 3em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.5s ease-out;
 }
 
 /* ===== ERROR TOAST ===== */

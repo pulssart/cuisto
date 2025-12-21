@@ -62,6 +62,36 @@ export function getSavedRecipes() {
 }
 
 /**
+ * Prépare une recette pour la sauvegarde (optimise les données)
+ * @param {Object} recipe 
+ * @returns {Object}
+ */
+function prepareRecipeForStorage(recipe) {
+  // Créer une copie pour ne pas modifier l'original
+  const prepared = { ...recipe };
+  
+  // Garder l'image principale (elle est importante)
+  // Mais supprimer les illustrations des étapes pour économiser de l'espace
+  if (prepared.instructions) {
+    prepared.instructions = prepared.instructions.map(instruction => {
+      if (typeof instruction === 'object') {
+        return {
+          text: instruction.text,
+          // On ne sauvegarde pas les illustrations pour économiser de l'espace
+          illustrationPrompt: instruction.illustrationPrompt,
+        };
+      }
+      return instruction;
+    });
+  }
+  
+  // Supprimer les prompts qui ne sont plus nécessaires
+  delete prepared.imagePrompt;
+  
+  return prepared;
+}
+
+/**
  * Sauvegarde une nouvelle recette
  * @param {Object} recipe 
  * @returns {Object} La recette avec son ID
@@ -69,16 +99,38 @@ export function getSavedRecipes() {
 export function saveRecipe(recipe) {
   try {
     const recipes = getSavedRecipes();
+    const preparedRecipe = prepareRecipeForStorage(recipe);
+    
     const newRecipe = {
-      ...recipe,
+      ...preparedRecipe,
       id: crypto.randomUUID(),
       savedAt: new Date().toISOString(),
     };
+    
     recipes.unshift(newRecipe);
-    localStorage.setItem(KEYS.RECIPES, JSON.stringify(recipes));
+    
+    // Essayer de sauvegarder
+    try {
+      localStorage.setItem(KEYS.RECIPES, JSON.stringify(recipes));
+    } catch (storageError) {
+      // Si erreur de quota, essayer de supprimer les anciennes recettes
+      if (storageError.name === 'QuotaExceededError' || 
+          storageError.code === 22 || 
+          storageError.code === 1014) {
+        console.warn('Quota localStorage dépassé, suppression des anciennes recettes...');
+        
+        // Garder seulement les 10 dernières recettes
+        const trimmedRecipes = recipes.slice(0, 10);
+        localStorage.setItem(KEYS.RECIPES, JSON.stringify(trimmedRecipes));
+      } else {
+        throw storageError;
+      }
+    }
+    
     return newRecipe;
   } catch (error) {
     console.error('Erreur lors de la sauvegarde de la recette:', error);
+    alert('Erreur lors de la sauvegarde. L\'espace de stockage est peut-être plein.');
     return null;
   }
 }
@@ -124,3 +176,16 @@ export function hasApiKey() {
   return key !== null && key.trim().length > 0;
 }
 
+/**
+ * Vide toutes les recettes sauvegardées
+ * @returns {boolean}
+ */
+export function clearAllRecipes() {
+  try {
+    localStorage.removeItem(KEYS.RECIPES);
+    return true;
+  } catch (error) {
+    console.error('Erreur lors de la suppression des recettes:', error);
+    return false;
+  }
+}
