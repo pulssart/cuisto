@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   ServingsIcon, 
   PrepTimeIcon, 
@@ -12,9 +12,16 @@ import { saveRecipe } from '../services/storage';
 import './RecipeView.css';
 
 export default function RecipeView({ recipe, onBack, onSaved }) {
-  const [isSaved, setIsSaved] = useState(false);
+  // Vérifie si la recette a déjà un ID (= déjà sauvegardée)
+  const [isSaved, setIsSaved] = useState(!!recipe.id);
   const [saving, setSaving] = useState(false);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
+
+  // Réinitialise l'état quand la recette change
+  useEffect(() => {
+    setIsSaved(!!recipe.id);
+    setIsImageFullscreen(false);
+  }, [recipe]);
 
   const handleSave = () => {
     if (isSaved || saving) return;
