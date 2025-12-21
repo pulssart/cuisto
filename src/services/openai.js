@@ -1,6 +1,6 @@
 /**
  * Service OpenAI pour Cuisto
- * Utilise gpt-4o pour le texte et gpt-image-1 pour les images
+ * Utilise gpt-5.2 pour le texte et gpt-image-1.5 pour les images
  */
 
 import { getApiKey } from './storage';
@@ -58,7 +58,10 @@ Tu dois générer une recette en JSON avec exactement cette structure:
     }
   ],
   "instructions": [
-    "Description très détaillée de l'étape avec explications, astuces et conseils..."
+    {
+      "text": "Description très détaillée de l'étape avec explications, astuces et conseils...",
+      "illustrationPrompt": "Description en anglais pour une illustration au crayon à papier montrant l'action principale de cette étape (ex: hands kneading dough on wooden surface)"
+    }
   ],
   "imagePrompt": "Description détaillée en anglais pour générer une photo appétissante du plat fini, servi dans une belle assiette moderne blanche, style food photography professionnel, lumière naturelle douce, vue légèrement en plongée"
 }
@@ -74,6 +77,7 @@ IMPORTANT pour les instructions:
 - Chaque étape doit être TRÈS détaillée (3-4 phrases minimum)
 - Inclus des explications sur le pourquoi, des astuces de chef, et des conseils pour réussir
 - Regroupe les actions similaires dans une même étape
+- Pour chaque illustrationPrompt, décris l'action principale visuellement (mains qui cuisinent, ustensiles, gestes)
 
 Sois précis dans les quantités et les temps de cuisson.`;
 
@@ -113,7 +117,7 @@ Sois précis dans les quantités et les temps de cuisson.`;
 }
 
 /**
- * Génère une image pour une recette
+ * Génère une image pour une recette (photo du plat)
  * @param {string} imagePrompt - Le prompt de description de l'image
  * @returns {Promise<string>} L'URL de l'image en base64
  */
@@ -144,16 +148,11 @@ export async function generateRecipeImage(imagePrompt) {
 
     if (!response.ok) {
       const error = await response.json();
-      // Fallback sur DALL-E 3 si gpt-image-1 n'est pas disponible
-      if (error.error?.code === 'model_not_found') {
-        return generateRecipeImageDallE(imagePrompt);
-      }
       throw new Error(error.error?.message || 'Erreur lors de la génération de l\'image');
     }
 
     const data = await response.json();
     
-    // gpt-image-1 retourne b64_json par défaut
     if (data.data[0].b64_json) {
       return `data:image/png;base64,${data.data[0].b64_json}`;
     }
@@ -161,54 +160,63 @@ export async function generateRecipeImage(imagePrompt) {
     return data.data[0].url;
   } catch (error) {
     console.error('Erreur OpenAI (image):', error);
-    // Essayer DALL-E 3 en fallback
-    try {
-      return await generateRecipeImageDallE(imagePrompt);
-    } catch (fallbackError) {
-      throw error;
-    }
+    throw error;
   }
 }
 
 /**
- * Fallback: Génère une image avec DALL-E 3
- * @param {string} imagePrompt 
- * @returns {Promise<string>}
+ * Génère une illustration style crayon à papier pour une étape
+ * @param {string} illustrationPrompt - Le prompt de description
+ * @returns {Promise<string>} L'URL de l'image en base64
  */
-async function generateRecipeImageDallE(imagePrompt) {
+export async function generateStepIllustration(illustrationPrompt) {
   const apiKey = getApiKey();
   
-  const enhancedPrompt = `Professional food photography of ${imagePrompt}. The dish is beautifully plated on a modern white ceramic plate, placed on a light wooden table with soft natural lighting. Shallow depth of field, appetizing presentation, high-end restaurant quality, no text or watermarks.`;
-
-  const response = await fetch(`${API_URL}/images/generations`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: IMAGE_MODEL,
-      prompt: enhancedPrompt,
-      n: 1,
-      size: '1024x1024',
-      quality: 'high',
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error?.message || 'Erreur lors de la génération de l\'image');
+  if (!apiKey) {
+    throw new Error('Clé API OpenAI non configurée');
   }
 
-  const data = await response.json();
-  return data.data[0].url;
+  const enhancedPrompt = `Pencil sketch illustration, hand-drawn style: ${illustrationPrompt}. Simple elegant pencil drawing on white paper, cooking illustration, minimal shading, clean lines, artistic sketch style, no color, black and white pencil art, cookbook illustration style.`;
+
+  try {
+    const response = await fetch(`${API_URL}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: IMAGE_MODEL,
+        prompt: enhancedPrompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'medium',
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Erreur lors de la génération de l\'illustration');
+    }
+
+    const data = await response.json();
+    
+    if (data.data[0].b64_json) {
+      return `data:image/png;base64,${data.data[0].b64_json}`;
+    }
+    
+    return data.data[0].url;
+  } catch (error) {
+    console.error('Erreur OpenAI (illustration):', error);
+    throw error;
+  }
 }
 
 /**
- * Génère une recette complète avec image
+ * Génère une recette complète avec image et illustrations des étapes
  * @param {Object} params - Les paramètres de génération
  * @param {Function} onProgress - Callback de progression
- * @returns {Promise<Object>} La recette avec l'image
+ * @returns {Promise<Object>} La recette avec l'image et les illustrations
  */
 export async function generateFullRecipe(params, onProgress) {
   try {
@@ -218,10 +226,43 @@ export async function generateFullRecipe(params, onProgress) {
     onProgress?.({ step: 'image', message: 'Génération de la photo...' });
     const imageUrl = await generateRecipeImage(recipe.imagePrompt);
     
+    // Générer les illustrations pour chaque étape
+    const instructionsWithIllustrations = [];
+    const totalSteps = recipe.instructions.length;
+    
+    for (let i = 0; i < totalSteps; i++) {
+      const instruction = recipe.instructions[i];
+      const stepText = typeof instruction === 'string' ? instruction : instruction.text;
+      const illustrationPrompt = typeof instruction === 'string' 
+        ? `cooking step: ${stepText.substring(0, 100)}` 
+        : instruction.illustrationPrompt;
+      
+      onProgress?.({ 
+        step: 'illustrations', 
+        message: `Illustration étape ${i + 1}/${totalSteps}...` 
+      });
+      
+      try {
+        const illustration = await generateStepIllustration(illustrationPrompt);
+        instructionsWithIllustrations.push({
+          text: stepText,
+          illustration: illustration,
+        });
+      } catch (error) {
+        console.error(`Erreur illustration étape ${i + 1}:`, error);
+        // En cas d'erreur, on continue sans illustration pour cette étape
+        instructionsWithIllustrations.push({
+          text: stepText,
+          illustration: null,
+        });
+      }
+    }
+    
     onProgress?.({ step: 'done', message: 'Terminé !' });
     
     return {
       ...recipe,
+      instructions: instructionsWithIllustrations,
       image: imageUrl,
       generatedAt: new Date().toISOString(),
     };
@@ -232,4 +273,3 @@ export async function generateFullRecipe(params, onProgress) {
 }
 
 export { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS };
-

@@ -16,11 +16,13 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [isSaved, setIsSaved] = useState(!!recipe.id);
   const [saving, setSaving] = useState(false);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
+  const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
 
   // Réinitialise l'état quand la recette change
   useEffect(() => {
     setIsSaved(!!recipe.id);
     setIsImageFullscreen(false);
+    setSelectedStepIllustration(null);
   }, [recipe]);
 
   const handleSave = () => {
@@ -47,6 +49,16 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     setIsImageFullscreen(false);
   };
 
+  const openStepIllustration = (step, index) => {
+    if (step.illustration) {
+      setSelectedStepIllustration({ ...step, index });
+    }
+  };
+
+  const closeStepIllustration = () => {
+    setSelectedStepIllustration(null);
+  };
+
   // Couleur selon la catégorie
   const getCategoryColor = (category) => {
     switch (category?.toUpperCase()) {
@@ -61,11 +73,22 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     }
   };
 
+  // Helper pour obtenir le texte d'une instruction
+  const getInstructionText = (instruction) => {
+    if (typeof instruction === 'string') return instruction;
+    return instruction.text || instruction;
+  };
+
+  // Helper pour vérifier si une instruction a une illustration
+  const hasIllustration = (instruction) => {
+    return typeof instruction === 'object' && instruction.illustration;
+  };
+
   const categoryColor = getCategoryColor(recipe.category);
 
   return (
     <div className="recipe-view">
-      {/* Lightbox pour l'image en plein écran */}
+      {/* Lightbox pour l'image du plat en plein écran */}
       {isImageFullscreen && recipe.image && (
         <div className="image-lightbox" onClick={closeImageFullscreen}>
           <button 
@@ -81,6 +104,29 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
             className="lightbox-image"
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      )}
+
+      {/* Lightbox pour l'illustration d'étape */}
+      {selectedStepIllustration && (
+        <div className="image-lightbox illustration-lightbox" onClick={closeStepIllustration}>
+          <button 
+            className="lightbox-close" 
+            onClick={closeStepIllustration}
+            aria-label="Fermer"
+          >
+            <CloseIcon size={28} color="white" />
+          </button>
+          <div className="illustration-lightbox-content" onClick={(e) => e.stopPropagation()}>
+            <div className="illustration-lightbox-header">
+              <span className="illustration-step-badge">Étape {selectedStepIllustration.index + 1}</span>
+            </div>
+            <img 
+              src={selectedStepIllustration.illustration} 
+              alt={`Illustration étape ${selectedStepIllustration.index + 1}`}
+              className="lightbox-image illustration-image"
+            />
+          </div>
         </div>
       )}
 
@@ -172,9 +218,21 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
               <h2 className="section-title">Préparation</h2>
               <ol className="instructions-list">
                 {recipe.instructions?.map((step, index) => (
-                  <li key={index} className="instruction-item">
+                  <li 
+                    key={index} 
+                    className={`instruction-item ${hasIllustration(step) ? 'has-illustration' : ''}`}
+                    onClick={() => hasIllustration(step) && openStepIllustration(step, index)}
+                    role={hasIllustration(step) ? 'button' : undefined}
+                    tabIndex={hasIllustration(step) ? 0 : undefined}
+                    onKeyDown={(e) => e.key === 'Enter' && hasIllustration(step) && openStepIllustration(step, index)}
+                  >
                     <span className="instruction-number">{index + 1}</span>
-                    <p className="instruction-text">{step}</p>
+                    <div className="instruction-content">
+                      <p className="instruction-text">{getInstructionText(step)}</p>
+                      {hasIllustration(step) && (
+                        <span className="illustration-hint">✏️ Voir l'illustration</span>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ol>
