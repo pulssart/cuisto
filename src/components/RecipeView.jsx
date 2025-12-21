@@ -5,7 +5,8 @@ import {
   CookTimeIcon, 
   RestTimeIcon,
   BookmarkIcon,
-  ArrowLeftIcon 
+  ArrowLeftIcon,
+  CloseIcon
 } from './icons';
 import { saveRecipe } from '../services/storage';
 import './RecipeView.css';
@@ -13,6 +14,7 @@ import './RecipeView.css';
 export default function RecipeView({ recipe, onBack, onSaved }) {
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isImageFullscreen, setIsImageFullscreen] = useState(false);
 
   const handleSave = () => {
     if (isSaved || saving) return;
@@ -28,6 +30,14 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const openImageFullscreen = () => {
+    setIsImageFullscreen(true);
+  };
+
+  const closeImageFullscreen = () => {
+    setIsImageFullscreen(false);
   };
 
   // Couleur selon la catégorie
@@ -48,6 +58,25 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
 
   return (
     <div className="recipe-view">
+      {/* Lightbox pour l'image en plein écran */}
+      {isImageFullscreen && recipe.image && (
+        <div className="image-lightbox" onClick={closeImageFullscreen}>
+          <button 
+            className="lightbox-close" 
+            onClick={closeImageFullscreen}
+            aria-label="Fermer"
+          >
+            <CloseIcon size={28} color="white" />
+          </button>
+          <img 
+            src={recipe.image} 
+            alt={recipe.title}
+            className="lightbox-image"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+
       {/* Header avec navigation */}
       <header className="recipe-header no-print">
         <button className="btn-icon" onClick={onBack} aria-label="Retour">
@@ -148,12 +177,22 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
           {/* Colonne droite: Image pleine hauteur */}
           <div className="recipe-column recipe-image-column">
             {recipe.image && (
-              <div className="recipe-image-container">
+              <div 
+                className="recipe-image-container"
+                onClick={openImageFullscreen}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && openImageFullscreen()}
+                aria-label="Agrandir l'image"
+              >
                 <img 
                   src={recipe.image} 
                   alt={recipe.title}
                   className="recipe-image"
                 />
+                <div className="image-zoom-hint">
+                  <span>🔍</span>
+                </div>
               </div>
             )}
           </div>

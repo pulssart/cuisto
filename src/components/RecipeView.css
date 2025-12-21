@@ -199,6 +199,16 @@
   background: var(--color-border-light);
   flex: 1;
   min-height: 300px;
+  cursor: zoom-in;
+  transition: transform var(--transition-fast);
+}
+
+.recipe-image-container:hover {
+  transform: scale(1.01);
+}
+
+.recipe-image-container:hover .image-zoom-hint {
+  opacity: 1;
 }
 
 @media (min-width: 700px) {
@@ -215,6 +225,69 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.image-zoom-hint {
+  position: absolute;
+  bottom: var(--spacing-md);
+  right: var(--spacing-md);
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+/* ===== IMAGE LIGHTBOX ===== */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  cursor: zoom-out;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  z-index: 10;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.lightbox-image {
+  max-width: 95%;
+  max-height: 95%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  cursor: default;
+  animation: slideUp 0.3s ease-out;
 }
 
 /* ===== INSTRUCTIONS SECTION ===== */
@@ -327,7 +400,9 @@
   }
   
   .no-print,
-  .recipe-header {
+  .recipe-header,
+  .image-lightbox,
+  .image-zoom-hint {
     display: none !important;
   }
   
