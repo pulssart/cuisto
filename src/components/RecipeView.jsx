@@ -226,6 +226,22 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
           <ArrowLeftIcon size={22} />
         </button>
         <div className="header-actions">
+          {recipe.chefComment && (
+            <button 
+              className={`btn-secondary chef-btn ${isPlayingAudio ? 'playing' : ''}`}
+              onClick={handlePlayChefComment}
+              disabled={isLoadingAudio}
+              aria-label={isPlayingAudio ? 'Mettre en pause' : 'Écouter le commentaire du chef'}
+            >
+              {isLoadingAudio ? (
+                <><span className="btn-spinner"></span> Chargement...</>
+              ) : isPlayingAudio ? (
+                <>⏸️ Pause</>
+              ) : (
+                <>👨‍🍳 Écoutez le Chef</>
+              )}
+            </button>
+          )}
           <button 
             className="btn-secondary print-btn"
             onClick={handlePrint}
@@ -254,36 +270,9 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
         {/* Titre */}
         <h1 className="recipe-title">{recipe.title}</h1>
 
-        {/* Commentaire du chef - bouton audio uniquement */}
-        {recipe.chefComment && (
-          <div className="chef-comment-section">
-            <button 
-              className={`chef-audio-btn ${isPlayingAudio ? 'playing' : ''} ${isLoadingAudio ? 'loading' : ''}`}
-              onClick={handlePlayChefComment}
-              disabled={isLoadingAudio}
-              aria-label={isPlayingAudio ? 'Mettre en pause' : 'Écouter le commentaire du chef'}
-            >
-              {isLoadingAudio ? (
-                <>
-                  <span className="audio-spinner"></span>
-                  Chargement...
-                </>
-              ) : isPlayingAudio ? (
-                <>
-                  <span className="audio-icon">⏸️</span>
-                  Pause
-                </>
-              ) : (
-                <>
-                  <span className="chef-icon">👨‍🍳</span>
-                  Écoutez le Chef
-                </>
-              )}
-            </button>
-            {audioError && (
-              <p className="chef-audio-error">{audioError}</p>
-            )}
-          </div>
+        {/* Erreur audio si présente */}
+        {audioError && (
+          <p className="chef-audio-error">{audioError}</p>
         )}
 
         {/* Pictos infos - centrés */}
