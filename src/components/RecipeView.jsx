@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   ServingsIcon, 
   PrepTimeIcon, 
@@ -9,6 +9,7 @@ import {
   CloseIcon
 } from './icons';
 import { saveRecipe } from '../services/storage';
+import { generateChefAudio } from '../services/openai';
 import './RecipeView.css';
 
 export default function RecipeView({ recipe, onBack, onSaved }) {
@@ -17,6 +18,13 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
+  
+  // États pour l'audio du chef
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioError, setAudioError] = useState(null);
+  const audioRef = useRef(null);
+  const audioUrlRef = useRef(null);
 
   // Utilise l'image HD si disponible, sinon le thumbnail (pour recettes sauvegardées)
   const displayImage = recipe.image || recipe.thumbnail;
@@ -26,7 +34,80 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     setIsSaved(!!recipe.id);
     setIsImageFullscreen(false);
     setSelectedStepIllustration(null);
+    // Reset audio state
+    setIsPlayingAudio(false);
+    setIsLoadingAudio(false);
+    setAudioError(null);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (audioUrlRef.current) {
+      URL.revokeObjectURL(audioUrlRef.current);
+      audioUrlRef.current = null;
+    }
   }, [recipe]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
+      }
+    };
+  }, []);
+
+  // Lecture du commentaire du chef
+  const handlePlayChefComment = async () => {
+    if (!recipe.chefComment) return;
+    
+    // Si déjà en lecture, on met en pause
+    if (isPlayingAudio && audioRef.current) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+      return;
+    }
+    
+    // Si l'audio est déjà chargé, on le relance
+    if (audioRef.current && audioUrlRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play();
+      setIsPlayingAudio(true);
+      return;
+    }
+    
+    // Sinon on génère l'audio
+    setIsLoadingAudio(true);
+    setAudioError(null);
+    
+    try {
+      const audioUrl = await generateChefAudio(recipe.chefComment);
+      audioUrlRef.current = audioUrl;
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        setIsPlayingAudio(false);
+      };
+      
+      audio.onerror = () => {
+        setAudioError('Erreur de lecture audio');
+        setIsPlayingAudio(false);
+      };
+      
+      await audio.play();
+      setIsPlayingAudio(true);
+    } catch (error) {
+      console.error('Erreur TTS:', error);
+      setAudioError(error.message || 'Erreur lors de la génération audio');
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  };
 
   const handleSave = async () => {
     if (isSaved || saving) return;
@@ -172,6 +253,43 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
 
         {/* Titre */}
         <h1 className="recipe-title">{recipe.title}</h1>
+
+        {/* Commentaire du chef */}
+        {recipe.chefComment && (
+          <div className="chef-comment-section">
+            <h2 className="chef-comment-title">
+              <span className="chef-icon">👨‍🍳</span>
+              Le commentaire du Chef
+            </h2>
+            <p className="chef-comment-text">{recipe.chefComment}</p>
+            <button 
+              className={`chef-audio-btn ${isPlayingAudio ? 'playing' : ''} ${isLoadingAudio ? 'loading' : ''}`}
+              onClick={handlePlayChefComment}
+              disabled={isLoadingAudio}
+              aria-label={isPlayingAudio ? 'Mettre en pause' : 'Écouter le commentaire'}
+            >
+              {isLoadingAudio ? (
+                <>
+                  <span className="audio-spinner"></span>
+                  Chargement...
+                </>
+              ) : isPlayingAudio ? (
+                <>
+                  <span className="audio-icon">⏸️</span>
+                  Pause
+                </>
+              ) : (
+                <>
+                  <span className="audio-icon">🔊</span>
+                  Écouter le Chef
+                </>
+              )}
+            </button>
+            {audioError && (
+              <p className="chef-audio-error">{audioError}</p>
+            )}
+          </div>
+        )}
 
         {/* Pictos infos - centrés */}
         <div className="recipe-meta">

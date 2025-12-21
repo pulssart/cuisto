@@ -51,6 +51,7 @@ Tu dois générer une recette en JSON avec exactement cette structure:
   "prepTime": "XX min",
   "cookTime": "XX min" (mettre "0 min" si pas de cuisson),
   "restTime": "XX min" (mettre "0 min" si pas de repos),
+  "chefComment": "Un commentaire passionné du chef (2-3 phrases) qui décrit cette recette avec amour, évoque les saveurs, les textures, l'histoire ou l'inspiration derrière ce plat. Écrit à la première personne comme si le chef parlait directement au lecteur.",
   "ingredients": [
     {
       "section": "Nom de la section (ex: Pour la pâte)",
@@ -268,6 +269,47 @@ export async function generateFullRecipe(params, onProgress) {
     };
   } catch (error) {
     onProgress?.({ step: 'error', message: error.message });
+    throw error;
+  }
+}
+
+/**
+ * Génère un audio TTS du commentaire du chef
+ * @param {string} text - Le texte à lire
+ * @returns {Promise<string>} URL blob de l'audio
+ */
+export async function generateChefAudio(text) {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    throw new Error('Clé API OpenAI non configurée');
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/audio/speech`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        input: text,
+        voice: 'onyx', // Voix grave et chaleureuse, parfaite pour un chef
+        response_format: 'mp3',
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Erreur lors de la génération audio');
+    }
+
+    // Convertir la réponse en blob audio
+    const audioBlob = await response.blob();
+    return URL.createObjectURL(audioBlob);
+  } catch (error) {
+    console.error('Erreur OpenAI (TTS):', error);
     throw error;
   }
 }
