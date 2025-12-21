@@ -25,16 +25,22 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     setSelectedStepIllustration(null);
   }, [recipe]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isSaved || saving) return;
     setSaving(true);
     
-    const savedRecipe = saveRecipe(recipe);
-    if (savedRecipe) {
-      setIsSaved(true);
-      onSaved?.(savedRecipe);
+    try {
+      const savedRecipe = await saveRecipe(recipe);
+      if (savedRecipe) {
+        setIsSaved(true);
+        onSaved?.(savedRecipe);
+      }
+    } catch (error) {
+      console.error('Erreur de sauvegarde:', error);
+      alert(error.message || 'Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handlePrint = () => {

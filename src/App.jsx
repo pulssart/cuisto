@@ -13,38 +13,38 @@ const VIEWS = {
   SAVED: 'saved',
 };
 
-// 30 phrases rigolotes de cuisinier pour le loader
+// 30 phrases rigolotes de cuisinier pour le loader (avec emoji séparé)
 const CHEF_QUOTES = [
-  "Je fais revenir les idées dans la poêle... 🍳",
-  "Je touille la créativité à feu doux... 🥄",
-  "Je laisse mijoter l'inspiration... 🍲",
-  "Je sale avec amour, je poivre avec passion... 🧂",
-  "Je consulte mes ancêtres cuisiniers... 👨‍🍳",
-  "Je fais flamber l'imagination... 🔥",
-  "Je goûte, je rectifie, je perfectionne... 👅",
-  "Je pétris la pâte des possibilités... 🥖",
-  "Je monte les blancs en neige d'idées... 🥚",
-  "Je caramélise les saveurs... 🍯",
-  "Je déglace avec un trait de génie... 🍷",
-  "Je fais réduire la sauce du doute... 🥘",
-  "Je cisèle finement les herbes de la créativité... 🌿",
-  "Je fouette énergiquement l'enthousiasme... 🥣",
-  "Je laisse reposer la pâte à idées... ⏰",
-  "Je préchauffe le four de l'innovation... 🔥",
-  "Je émince les légumes de l'inspiration... 🥕",
-  "Je fais sauter les préjugés culinaires... 🍳",
-  "Je nappe généreusement de gourmandise... 🍫",
-  "Je dispose artistiquement dans l'assiette... 🎨",
-  "Je vérifie l'assaisonnement cosmique... ✨",
-  "Je fais lever la pâte de l'imagination... 🥐",
-  "Je gratine le tout avec brio... 🧀",
-  "Je ajoute une pincée de magie... ✨",
-  "Je fais infuser les arômes du succès... 🍵",
-  "Je émulsionne la sauce du bonheur... 🥗",
-  "Je tranche dans le vif du sujet... 🔪",
-  "Je fais mariner les idées overnight... 🌙",
-  "Je dresse l'assiette comme un chef... 👨‍🍳",
-  "Je ajoute la touche finale... et voilà ! 🎉",
+  { text: "Je fais revenir les idées dans la poêle...", emoji: "🍳" },
+  { text: "Je touille la créativité à feu doux...", emoji: "🥄" },
+  { text: "Je laisse mijoter l'inspiration...", emoji: "🍲" },
+  { text: "Je sale avec amour, je poivre avec passion...", emoji: "🧂" },
+  { text: "Je consulte mes ancêtres cuisiniers...", emoji: "👨‍🍳" },
+  { text: "Je fais flamber l'imagination...", emoji: "🔥" },
+  { text: "Je goûte, je rectifie, je perfectionne...", emoji: "👅" },
+  { text: "Je pétris la pâte des possibilités...", emoji: "🥖" },
+  { text: "Je monte les blancs en neige d'idées...", emoji: "🥚" },
+  { text: "Je caramélise les saveurs...", emoji: "🍯" },
+  { text: "Je déglace avec un trait de génie...", emoji: "🍷" },
+  { text: "Je fais réduire la sauce du doute...", emoji: "🥘" },
+  { text: "Je cisèle finement les herbes de la créativité...", emoji: "🌿" },
+  { text: "Je fouette énergiquement l'enthousiasme...", emoji: "🥣" },
+  { text: "Je laisse reposer la pâte à idées...", emoji: "⏰" },
+  { text: "Je préchauffe le four de l'innovation...", emoji: "🔥" },
+  { text: "J'émince les légumes de l'inspiration...", emoji: "🥕" },
+  { text: "Je fais sauter les préjugés culinaires...", emoji: "🍳" },
+  { text: "Je nappe généreusement de gourmandise...", emoji: "🍫" },
+  { text: "Je dispose artistiquement dans l'assiette...", emoji: "🎨" },
+  { text: "Je vérifie l'assaisonnement cosmique...", emoji: "✨" },
+  { text: "Je fais lever la pâte de l'imagination...", emoji: "🥐" },
+  { text: "Je gratine le tout avec brio...", emoji: "🧀" },
+  { text: "J'ajoute une pincée de magie...", emoji: "✨" },
+  { text: "Je fais infuser les arômes du succès...", emoji: "🍵" },
+  { text: "J'émulsionne la sauce du bonheur...", emoji: "🥗" },
+  { text: "Je tranche dans le vif du sujet...", emoji: "🔪" },
+  { text: "Je fais mariner les idées overnight...", emoji: "🌙" },
+  { text: "Je dresse l'assiette comme un chef...", emoji: "👨‍🍳" },
+  { text: "J'ajoute la touche finale... et voilà !", emoji: "🎉" },
 ];
 
 function App() {
@@ -54,7 +54,7 @@ function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(null);
   const [error, setError] = useState(null);
-  const [chefQuote, setChefQuote] = useState('');
+  const [chefQuote, setChefQuote] = useState({ text: '', emoji: '' });
 
   // Changer la phrase toutes les 3 secondes pendant la génération
   useEffect(() => {
@@ -124,12 +124,12 @@ function App() {
       {isGenerating && (
         <div className="generation-overlay">
           <div className="generation-modal">
-            <div className="generation-spinner"></div>
+            <div className="generation-emoji">{chefQuote.emoji}</div>
+            <p className="generation-quote">
+              {chefQuote.text}
+            </p>
             <p className="generation-status">
               {generationProgress?.message || 'Génération en cours...'}
-            </p>
-            <p className="generation-quote">
-              {chefQuote}
             </p>
           </div>
         </div>

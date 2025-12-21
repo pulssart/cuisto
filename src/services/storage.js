@@ -7,6 +7,11 @@ const KEYS = {
   RECIPES: 'cuisto_saved_recipes',
 };
 
+// Limite de taille pour les images (100 Ko en base64)
+const MAX_IMAGE_SIZE = 100 * 1024;
+// Nombre max de recettes à garder
+const MAX_RECIPES = 20;
+
 /**
  * Sauvegarde la clé API OpenAI
  * @param {string} apiKey 
@@ -62,16 +67,74 @@ export function getSavedRecipes() {
 }
 
 /**
+ * Compresse une image base64 en réduisant sa qualité
+ * @param {string} base64 - Image en base64
+ * @param {number} maxSize - Taille max en caractères
+ * @returns {Promise<string|null>}
+ */
+async function compressImage(base64, maxSize = MAX_IMAGE_SIZE) {
+  return new Promise((resolve) => {
+    // Si pas d'image ou déjà assez petite
+    if (!base64 || base64.length <= maxSize) {
+      resolve(base64);
+      return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      
+      // Réduire la taille de l'image proportionnellement
+      let { width, height } = img;
+      const maxDimension = 400; // Taille max pour le stockage
+      
+      if (width > maxDimension || height > maxDimension) {
+        if (width > height) {
+          height = (height / width) * maxDimension;
+          width = maxDimension;
+        } else {
+          width = (width / height) * maxDimension;
+          height = maxDimension;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Compresser en JPEG avec qualité réduite
+      const compressed = canvas.toDataURL('image/jpeg', 0.6);
+      
+      // Si toujours trop grand, on abandonne l'image
+      if (compressed.length > maxSize * 2) {
+        resolve(null);
+      } else {
+        resolve(compressed);
+      }
+    };
+    
+    img.onerror = () => resolve(null);
+    img.src = base64;
+  });
+}
+
+/**
  * Prépare une recette pour la sauvegarde (optimise les données)
  * @param {Object} recipe 
- * @returns {Object}
+ * @returns {Promise<Object>}
  */
-function prepareRecipeForStorage(recipe) {
+async function prepareRecipeForStorage(recipe) {
   // Créer une copie pour ne pas modifier l'original
   const prepared = { ...recipe };
   
-  // Garder l'image principale (elle est importante)
-  // Mais supprimer les illustrations des étapes pour économiser de l'espace
+  // Compresser l'image principale ou la supprimer si trop grande
+  if (prepared.image) {
+    prepared.image = await compressImage(prepared.image);
+  }
+  
+  // Supprimer les illustrations des étapes pour économiser de l'espace
   if (prepared.instructions) {
     prepared.instructions = prepared.instructions.map(instruction => {
       if (typeof instruction === 'object') {
@@ -92,14 +155,34 @@ function prepareRecipeForStorage(recipe) {
 }
 
 /**
+ * Essaie de sauvegarder les recettes, avec gestion du quota
+ * @param {Array} recipes 
+ * @returns {boolean}
+ */
+function trySaveRecipes(recipes) {
+  try {
+    localStorage.setItem(KEYS.RECIPES, JSON.stringify(recipes));
+    return true;
+  } catch (storageError) {
+    // Si erreur de quota
+    if (storageError.name === 'QuotaExceededError' || 
+        storageError.code === 22 || 
+        storageError.code === 1014) {
+      return false;
+    }
+    throw storageError;
+  }
+}
+
+/**
  * Sauvegarde une nouvelle recette
  * @param {Object} recipe 
- * @returns {Object} La recette avec son ID
+ * @returns {Promise<Object>} La recette avec son ID
  */
-export function saveRecipe(recipe) {
+export async function saveRecipe(recipe) {
   try {
-    const recipes = getSavedRecipes();
-    const preparedRecipe = prepareRecipeForStorage(recipe);
+    let recipes = getSavedRecipes();
+    const preparedRecipe = await prepareRecipeForStorage(recipe);
     
     const newRecipe = {
       ...preparedRecipe,
@@ -109,29 +192,44 @@ export function saveRecipe(recipe) {
     
     recipes.unshift(newRecipe);
     
+    // Limiter le nombre de recettes
+    if (recipes.length > MAX_RECIPES) {
+      recipes = recipes.slice(0, MAX_RECIPES);
+    }
+    
     // Essayer de sauvegarder
-    try {
-      localStorage.setItem(KEYS.RECIPES, JSON.stringify(recipes));
-    } catch (storageError) {
-      // Si erreur de quota, essayer de supprimer les anciennes recettes
-      if (storageError.name === 'QuotaExceededError' || 
-          storageError.code === 22 || 
-          storageError.code === 1014) {
-        console.warn('Quota localStorage dépassé, suppression des anciennes recettes...');
+    if (!trySaveRecipes(recipes)) {
+      console.warn('Quota localStorage dépassé, optimisation en cours...');
+      
+      // Stratégie 1: Supprimer les images des anciennes recettes
+      recipes = recipes.map((r, index) => {
+        if (index > 0) {
+          return { ...r, image: null };
+        }
+        return r;
+      });
+      
+      if (!trySaveRecipes(recipes)) {
+        // Stratégie 2: Supprimer l'image de la nouvelle recette aussi
+        recipes[0] = { ...recipes[0], image: null };
         
-        // Garder seulement les 10 dernières recettes
-        const trimmedRecipes = recipes.slice(0, 10);
-        localStorage.setItem(KEYS.RECIPES, JSON.stringify(trimmedRecipes));
-      } else {
-        throw storageError;
+        if (!trySaveRecipes(recipes)) {
+          // Stratégie 3: Garder seulement les 5 dernières recettes sans images
+          recipes = recipes.slice(0, 5).map(r => ({ ...r, image: null }));
+          
+          if (!trySaveRecipes(recipes)) {
+            throw new Error('Impossible de sauvegarder, stockage plein');
+          }
+        }
       }
+      
+      console.info('Sauvegarde réussie après optimisation');
     }
     
     return newRecipe;
   } catch (error) {
     console.error('Erreur lors de la sauvegarde de la recette:', error);
-    alert('Erreur lors de la sauvegarde. L\'espace de stockage est peut-être plein.');
-    return null;
+    throw new Error('Erreur lors de la sauvegarde. Essayez de supprimer d\'anciennes recettes.');
   }
 }
 
