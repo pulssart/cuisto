@@ -72,91 +72,30 @@
 
 /* ===== CHEF COMMENT SECTION ===== */
 .chef-comment-section {
-  background: linear-gradient(135deg, #FFF8E1 0%, #FFECB3 100%);
-  border: 1px solid #FFD54F;
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-xl);
   text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.chef-comment-section::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255, 193, 7, 0.1) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.chef-comment-title {
-  font-family: var(--font-serif);
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #5D4037;
-  margin: 0 0 var(--spacing-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-sm);
-}
-
-.chef-icon {
-  font-size: 1.4rem;
-}
-
-.chef-comment-text {
-  font-family: var(--font-serif);
-  font-size: 1.05rem;
-  font-style: italic;
-  line-height: 1.7;
-  color: #4E342E;
-  margin: 0 0 var(--spacing-lg);
-  position: relative;
-}
-
-.chef-comment-text::before {
-  content: '"';
-  font-size: 2rem;
-  color: #FFB300;
-  position: absolute;
-  left: -15px;
-  top: -10px;
-  font-family: Georgia, serif;
-}
-
-.chef-comment-text::after {
-  content: '"';
-  font-size: 2rem;
-  color: #FFB300;
-  font-family: Georgia, serif;
-  margin-left: 4px;
+  margin-bottom: var(--spacing-xl);
 }
 
 .chef-audio-btn {
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-lg);
+  padding: var(--spacing-md) var(--spacing-xl);
   background: linear-gradient(135deg, #FF8F00 0%, #F57C00 100%);
   color: white;
   border: none;
   border-radius: var(--radius-full);
   font-family: var(--font-sans);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
-  box-shadow: 0 3px 10px rgba(255, 143, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(255, 143, 0, 0.35);
 }
 
 .chef-audio-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(255, 143, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(255, 143, 0, 0.45);
 }
 
 .chef-audio-btn:active:not(:disabled) {
@@ -170,20 +109,24 @@
 
 .chef-audio-btn.playing {
   background: linear-gradient(135deg, #5D4037 0%, #4E342E 100%);
-  box-shadow: 0 3px 10px rgba(93, 64, 55, 0.3);
+  box-shadow: 0 4px 15px rgba(93, 64, 55, 0.35);
 }
 
 .chef-audio-btn.loading {
   background: linear-gradient(135deg, #9E9E9E 0%, #757575 100%);
 }
 
+.chef-icon {
+  font-size: 1.3rem;
+}
+
 .audio-icon {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
 }
 
 .audio-spinner {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: white;
   border-radius: 50%;
@@ -546,22 +489,6 @@
     font-size: 1.6rem;
   }
   
-  .chef-comment-section {
-    padding: var(--spacing-md);
-  }
-  
-  .chef-comment-title {
-    font-size: 1rem;
-  }
-  
-  .chef-comment-text {
-    font-size: 0.95rem;
-  }
-  
-  .chef-comment-text::before {
-    left: -8px;
-    font-size: 1.5rem;
-  }
   
   .recipe-meta {
     gap: var(--spacing-lg);
@@ -622,35 +549,8 @@
   .image-zoom-hint,
   .illustration-hint,
   .illustration-lightbox,
-  .chef-audio-btn,
-  .chef-audio-error {
-    display: none !important;
-  }
-  
   .chef-comment-section {
-    background: #FFF8E1 !important;
-    border: 1px solid #FFD54F !important;
-    padding: 10px;
-    margin-bottom: 12px;
-  }
-  
-  .chef-comment-section::before {
-    display: none;
-  }
-  
-  .chef-comment-title {
-    font-size: 10pt;
-    margin-bottom: 6px;
-  }
-  
-  .chef-comment-text {
-    font-size: 9pt;
-    margin-bottom: 0;
-  }
-  
-  .chef-comment-text::before,
-  .chef-comment-text::after {
-    font-size: 1.2rem;
+    display: none !important;
   }
   
   .instruction-item.has-illustration {

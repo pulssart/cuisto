@@ -254,19 +254,14 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
         {/* Titre */}
         <h1 className="recipe-title">{recipe.title}</h1>
 
-        {/* Commentaire du chef */}
+        {/* Commentaire du chef - bouton audio uniquement */}
         {recipe.chefComment && (
           <div className="chef-comment-section">
-            <h2 className="chef-comment-title">
-              <span className="chef-icon">👨‍🍳</span>
-              Le commentaire du Chef
-            </h2>
-            <p className="chef-comment-text">{recipe.chefComment}</p>
             <button 
               className={`chef-audio-btn ${isPlayingAudio ? 'playing' : ''} ${isLoadingAudio ? 'loading' : ''}`}
               onClick={handlePlayChefComment}
               disabled={isLoadingAudio}
-              aria-label={isPlayingAudio ? 'Mettre en pause' : 'Écouter le commentaire'}
+              aria-label={isPlayingAudio ? 'Mettre en pause' : 'Écouter le commentaire du chef'}
             >
               {isLoadingAudio ? (
                 <>
@@ -280,8 +275,8 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
                 </>
               ) : (
                 <>
-                  <span className="audio-icon">🔊</span>
-                  Écouter le Chef
+                  <span className="chef-icon">👨‍🍳</span>
+                  Écoutez le Chef
                 </>
               )}
             </button>
