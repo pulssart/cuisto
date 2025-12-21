@@ -75,11 +75,11 @@ export default function SavedRecipes({ onBack, onSelectRecipe }) {
                 className={`recipe-card ${deletingId === recipe.id ? 'deleting' : ''}`}
                 onClick={() => onSelectRecipe(recipe)}
               >
-                {/* Image */}
+                {/* Image (thumbnail pour les nouvelles recettes, image pour la rétrocompatibilité) */}
                 <div className="card-image-container">
-                  {recipe.image ? (
+                  {(recipe.thumbnail || recipe.image) ? (
                     <img
-                      src={recipe.image}
+                      src={recipe.thumbnail || recipe.image}
                       alt={recipe.title}
                       className="card-image"
                       loading="lazy"

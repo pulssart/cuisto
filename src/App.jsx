@@ -114,8 +114,13 @@ function App() {
   }, []);
 
   // Callback quand une recette est sauvegardée
+  // On garde la recette HD en cours mais on ajoute l'ID pour marquer comme sauvegardée
   const handleRecipeSaved = useCallback((savedRecipe) => {
-    setCurrentRecipe(savedRecipe);
+    setCurrentRecipe(prev => ({
+      ...prev,
+      id: savedRecipe.id,
+      savedAt: savedRecipe.savedAt,
+    }));
   }, []);
 
   return (

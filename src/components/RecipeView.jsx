@@ -18,6 +18,9 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
 
+  // Utilise l'image HD si disponible, sinon le thumbnail (pour recettes sauvegardées)
+  const displayImage = recipe.image || recipe.thumbnail;
+
   // Réinitialise l'état quand la recette change
   useEffect(() => {
     setIsSaved(!!recipe.id);
@@ -95,7 +98,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   return (
     <div className="recipe-view">
       {/* Lightbox pour l'image du plat en plein écran */}
-      {isImageFullscreen && recipe.image && (
+      {isImageFullscreen && displayImage && (
         <div className="image-lightbox" onClick={closeImageFullscreen}>
           <button 
             className="lightbox-close" 
@@ -105,7 +108,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
             <CloseIcon size={28} color="white" />
           </button>
           <img 
-            src={recipe.image} 
+            src={displayImage} 
             alt={recipe.title}
             className="lightbox-image"
             onClick={(e) => e.stopPropagation()}
@@ -247,7 +250,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
 
           {/* Colonne droite: Image pleine hauteur */}
           <div className="recipe-column recipe-image-column">
-            {recipe.image && (
+            {displayImage && (
               <div 
                 className="recipe-image-container"
                 onClick={openImageFullscreen}
@@ -257,7 +260,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
                 aria-label="Agrandir l'image"
               >
                 <img 
-                  src={recipe.image} 
+                  src={displayImage} 
                   alt={recipe.title}
                   className="recipe-image"
                 />

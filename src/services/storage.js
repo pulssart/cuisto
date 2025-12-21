@@ -122,6 +122,7 @@ async function compressImage(base64, maxSize = MAX_IMAGE_SIZE) {
 
 /**
  * Prépare une recette pour la sauvegarde (optimise les données)
+ * On crée un thumbnail basse définition et on supprime la photo HD et les illustrations
  * @param {Object} recipe 
  * @returns {Promise<Object>}
  */
@@ -129,19 +130,21 @@ async function prepareRecipeForStorage(recipe) {
   // Créer une copie pour ne pas modifier l'original
   const prepared = { ...recipe };
   
-  // Compresser l'image principale ou la supprimer si trop grande
+  // Créer un thumbnail basse définition de l'image principale
   if (prepared.image) {
-    prepared.image = await compressImage(prepared.image);
+    prepared.thumbnail = await compressImage(prepared.image);
+    // Supprimer l'image HD - on ne garde que le thumbnail
+    delete prepared.image;
   }
   
   // Supprimer les illustrations des étapes pour économiser de l'espace
+  // On ne garde que le texte de chaque étape
   if (prepared.instructions) {
     prepared.instructions = prepared.instructions.map(instruction => {
       if (typeof instruction === 'object') {
         return {
           text: instruction.text,
-          // On ne sauvegarde pas les illustrations pour économiser de l'espace
-          illustrationPrompt: instruction.illustrationPrompt,
+          // On ne sauvegarde pas les illustrations ni les prompts
         };
       }
       return instruction;
