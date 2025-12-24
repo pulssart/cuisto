@@ -1,25 +1,68 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeftIcon, TrashIcon } from './icons';
-import { getSavedRecipes, deleteRecipe } from '../services/storage';
+import { getSavedRecipesAsync, deleteRecipe, getRecipeById, getStorageUsage, formatStorageSize } from '../services/storage';
 import './SavedRecipes.css';
 
 export default function SavedRecipes({ onBack, onSelectRecipe }) {
   const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [loadingRecipeId, setLoadingRecipeId] = useState(null);
+  const [storageInfo, setStorageInfo] = useState(null);
 
+  // Charger les recettes et les infos de stockage au montage
   useEffect(() => {
-    setRecipes(getSavedRecipes());
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [savedRecipes, storage] = await Promise.all([
+          getSavedRecipesAsync(),
+          getStorageUsage()
+        ]);
+        setRecipes(savedRecipes);
+        setStorageInfo(storage);
+      } catch (error) {
+        console.error('Erreur chargement recettes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
 
-  const handleDelete = (e, recipeId) => {
+  const handleDelete = async (e, recipeId) => {
     e.stopPropagation();
     setDeletingId(recipeId);
     
-    setTimeout(() => {
-      deleteRecipe(recipeId);
+    // Animation de suppression
+    setTimeout(async () => {
+      await deleteRecipe(recipeId);
       setRecipes(recipes.filter(r => r.id !== recipeId));
       setDeletingId(null);
     }, 300);
+  };
+
+  // Charger la recette complète avec images HD quand on clique
+  const handleSelectRecipe = async (recipe) => {
+    setLoadingRecipeId(recipe.id);
+    
+    try {
+      // Récupérer la recette complète avec images HD et illustrations
+      const fullRecipe = await getRecipeById(recipe.id);
+      
+      if (fullRecipe) {
+        onSelectRecipe(fullRecipe);
+      } else {
+        // Fallback: utiliser les données de la liste
+        onSelectRecipe(recipe);
+      }
+    } catch (error) {
+      console.error('Erreur chargement recette complète:', error);
+      onSelectRecipe(recipe);
+    } finally {
+      setLoadingRecipeId(null);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -56,9 +99,30 @@ export default function SavedRecipes({ onBack, onSelectRecipe }) {
         <div className="header-spacer"></div>
       </header>
 
+      {/* Indicateur de stockage */}
+      {storageInfo && recipes.length > 0 && (
+        <div className="storage-indicator">
+          <div className="storage-bar">
+            <div 
+              className="storage-bar-fill" 
+              style={{ width: `${Math.min(storageInfo.percentage, 100)}%` }}
+            />
+          </div>
+          <span className="storage-text">
+            {formatStorageSize(storageInfo.used)} utilisés
+            {storageInfo.percentage > 80 && ' ⚠️'}
+          </span>
+        </div>
+      )}
+
       {/* Contenu */}
       <div className="saved-content">
-        {recipes.length === 0 ? (
+        {loading ? (
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <p>Chargement des recettes...</p>
+          </div>
+        ) : recipes.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">📖</div>
             <h2>Aucune recette sauvegardée</h2>
@@ -72,9 +136,16 @@ export default function SavedRecipes({ onBack, onSelectRecipe }) {
             {recipes.map((recipe) => (
               <article
                 key={recipe.id}
-                className={`recipe-card ${deletingId === recipe.id ? 'deleting' : ''}`}
-                onClick={() => onSelectRecipe(recipe)}
+                className={`recipe-card ${deletingId === recipe.id ? 'deleting' : ''} ${loadingRecipeId === recipe.id ? 'loading' : ''}`}
+                onClick={() => handleSelectRecipe(recipe)}
               >
+                {/* Overlay de chargement */}
+                {loadingRecipeId === recipe.id && (
+                  <div className="card-loading-overlay">
+                    <div className="card-spinner"></div>
+                  </div>
+                )}
+
                 {/* Image (thumbnail pour les nouvelles recettes, image pour la rétrocompatibilité) */}
                 <div className="card-image-container">
                   {(recipe.thumbnail || recipe.image) ? (
@@ -123,4 +194,3 @@ export default function SavedRecipes({ onBack, onSelectRecipe }) {
     </div>
   );
 }
-

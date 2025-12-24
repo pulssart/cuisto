@@ -168,8 +168,6 @@
   margin: 0 0 var(--spacing-md);
   padding-bottom: var(--spacing-sm);
   border-bottom: 2px solid var(--color-border);
-  text-decoration: underline;
-  text-underline-offset: 4px;
 }
 
 /* ===== INGREDIENTS SECTION ===== */
@@ -382,27 +380,17 @@
 }
 
 .instruction-item {
-  display: flex;
-  gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
   padding-bottom: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
   border-bottom: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
 
 .instruction-item.has-illustration {
-  cursor: pointer;
   background: transparent;
-}
-
-.instruction-item.has-illustration:hover {
-  background: var(--color-background-light);
-}
-
-.instruction-item.has-illustration:active {
-  transform: scale(0.99);
 }
 
 .instruction-item:last-child {
@@ -412,22 +400,24 @@
 }
 
 .instruction-number {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 28px;
+  height: 28px;
   background: var(--color-accent);
   color: white;
   font-family: var(--font-serif);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   border-radius: 50%;
+  margin-bottom: var(--spacing-sm);
+  margin-right: var(--spacing-sm);
+  vertical-align: middle;
 }
 
 .instruction-content {
-  flex: 1;
+  width: 100%;
 }
 
 .instruction-text {
@@ -435,19 +425,74 @@
   line-height: 1.7;
   color: var(--color-text);
   margin: 0;
-  padding-top: 4px;
-}
-
-.illustration-hint {
   display: inline-block;
-  margin-top: var(--spacing-sm);
-  font-size: 0.85rem;
-  color: var(--color-accent);
-  font-weight: 500;
+  width: 100%;
 }
 
-.instruction-item.has-illustration:hover .illustration-hint {
-  text-decoration: underline;
+/* ===== INSTRUCTION ILLUSTRATIONS INLINE ===== */
+.instruction-illustration {
+  position: relative;
+  margin-top: var(--spacing-md);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-background-light);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-soft);
+  cursor: zoom-in;
+  transition: all var(--transition-fast);
+}
+
+.instruction-illustration:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-medium);
+  border-color: var(--color-accent);
+}
+
+.instruction-illustration:active {
+  transform: scale(0.98);
+}
+
+.step-illustration-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+  transition: transform var(--transition-fast);
+}
+
+.instruction-illustration:hover .step-illustration-image {
+  transform: scale(1.05);
+}
+
+.illustration-zoom-hint {
+  position: absolute;
+  bottom: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.instruction-illustration:hover .illustration-zoom-hint {
+  opacity: 1;
+}
+
+@media (min-width: 600px) {
+  .instruction-illustration {
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* ===== RESPONSIVE ===== */
@@ -466,13 +511,14 @@
   }
   
   .instruction-item {
-    gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
+    padding-top: var(--spacing-md);
   }
   
   .instruction-number {
-    width: 28px;
-    height: 28px;
-    font-size: 0.9rem;
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
   }
 }
 
@@ -514,15 +560,38 @@
   .recipe-header,
   .image-lightbox,
   .image-zoom-hint,
-  .illustration-hint,
+  .illustration-zoom-hint,
   .illustration-lightbox,
   .chef-audio-error {
     display: none !important;
   }
   
+  .instruction-illustration {
+    cursor: default !important;
+  }
+  
+  .instruction-illustration:hover {
+    transform: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    border-color: var(--color-border-light) !important;
+  }
+  
   .instruction-item.has-illustration {
     cursor: default;
     background: transparent !important;
+  }
+  
+  .instruction-illustration {
+    margin-top: 6px;
+    margin-bottom: 4px;
+    border: 1px solid #ddd;
+    border-radius: 2px;
+    max-width: 100%;
+  }
+  
+  .step-illustration-image {
+    max-width: 100%;
+    height: auto;
   }
   
   .recipe-content {
@@ -638,7 +707,7 @@
   .instruction-item {
     margin-bottom: 8px;
     padding-bottom: 8px;
-    gap: 8px;
+    padding-top: 10px;
     page-break-inside: avoid;
   }
   
@@ -648,11 +717,14 @@
     font-size: 9pt;
     background: var(--color-accent) !important;
     color: white !important;
+    margin-bottom: 4px;
+    margin-right: 6px;
   }
   
   .instruction-text {
     font-size: 9pt;
     line-height: 1.5;
-    padding-top: 2px;
+    display: inline-block;
+    width: 100%;
   }
 }

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChefHatIcon, SettingsIcon, BookmarkIcon } from './icons';
 import { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS } from '../services/openai';
-import { hasApiKey, getSavedRecipes } from '../services/storage';
+import { hasApiKey, getRecipesCount } from '../services/storage';
 import './HomePage.css';
 
 export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGenerating }) {
@@ -10,9 +10,18 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
   const [difficultyIndex, setDifficultyIndex] = useState(1); // Facile
   const [audienceIndex, setAudienceIndex] = useState(3); // Toute la famille
   const [typeIndex, setTypeIndex] = useState(0); // Salé
+  const [savedRecipesCount, setSavedRecipesCount] = useState(0);
 
-  const savedRecipesCount = getSavedRecipes().length;
   const apiConfigured = hasApiKey();
+
+  // Charger le nombre de recettes au montage
+  useEffect(() => {
+    const loadCount = async () => {
+      const count = await getRecipesCount();
+      setSavedRecipesCount(count);
+    };
+    loadCount();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -186,4 +195,3 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
     </div>
   );
 }
-

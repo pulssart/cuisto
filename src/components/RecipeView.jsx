@@ -149,6 +149,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     setSelectedStepIllustration(null);
   };
 
+
   // Couleur selon la catégorie
   const getCategoryColor = (category) => {
     switch (category?.toUpperCase()) {
@@ -219,6 +220,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
           </div>
         </div>
       )}
+
 
       {/* Header avec navigation */}
       <header className="recipe-header no-print">
@@ -332,16 +334,29 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
                   <li 
                     key={index} 
                     className={`instruction-item ${hasIllustration(step) ? 'has-illustration' : ''}`}
-                    onClick={() => hasIllustration(step) && openStepIllustration(step, index)}
-                    role={hasIllustration(step) ? 'button' : undefined}
-                    tabIndex={hasIllustration(step) ? 0 : undefined}
-                    onKeyDown={(e) => e.key === 'Enter' && hasIllustration(step) && openStepIllustration(step, index)}
                   >
                     <span className="instruction-number">{index + 1}</span>
                     <div className="instruction-content">
                       <p className="instruction-text">{getInstructionText(step)}</p>
                       {hasIllustration(step) && (
-                        <span className="illustration-hint">✏️ Voir l'illustration</span>
+                        <div 
+                          className="instruction-illustration"
+                          onClick={() => openStepIllustration(step, index)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => e.key === 'Enter' && openStepIllustration(step, index)}
+                          aria-label={`Agrandir l'illustration de l'étape ${index + 1}`}
+                        >
+                          <img 
+                            src={step.illustration} 
+                            alt={`Illustration étape ${index + 1}`}
+                            className="step-illustration-image"
+                            loading="lazy"
+                          />
+                          <div className="illustration-zoom-hint">
+                            <span>🔍</span>
+                          </div>
+                        </div>
                       )}
                     </div>
                   </li>
