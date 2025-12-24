@@ -115,13 +115,58 @@ function blobToBase64(blob) {
 }
 
 /**
+ * Convertit une URL blob en Blob
+ * @param {string} url - URL blob
+ * @returns {Promise<Blob|null>}
+ */
+async function urlToBlob(url) {
+  if (!url || !url.startsWith('blob:')) return null;
+  
+  try {
+    const response = await fetch(url);
+    return await response.blob();
+  } catch (error) {
+    console.error('Erreur conversion URL vers Blob:', error);
+    return null;
+  }
+}
+
+/**
+ * Convertit une URL HTTP/HTTPS en base64
+ * @param {string} url - URL de l'image
+ * @returns {Promise<string|null>}
+ */
+async function httpUrlToBase64(url) {
+  if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    return null;
+  }
+  
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    return await blobToBase64(blob);
+  } catch (error) {
+    console.error('Erreur conversion URL HTTP vers base64:', error);
+    return null;
+  }
+}
+
+/**
  * Compresse une image en JPEG pour optimiser le stockage
- * @param {string} base64 - Image source en base64
+ * Accepte base64 ou URL HTTP/HTTPS
+ * @param {string} base64OrUrl - Image source en base64 ou URL
  * @param {number} quality - Qualité JPEG (0-1)
  * @returns {Promise<string|null>}
  */
-async function compressImage(base64, quality = 0.85) {
-  if (!base64) return null;
+async function compressImage(base64OrUrl, quality = 0.85) {
+  if (!base64OrUrl) return null;
+  
+  // Si c'est une URL HTTP/HTTPS, la convertir en base64 d'abord
+  let base64 = base64OrUrl;
+  if (base64OrUrl.startsWith('http://') || base64OrUrl.startsWith('https://')) {
+    base64 = await httpUrlToBase64(base64OrUrl);
+    if (!base64) return null;
+  }
   
   return new Promise((resolve) => {
     const img = new Image();
@@ -397,6 +442,12 @@ export async function saveRecipe(recipe) {
       })
     );
     
+    // Convertir l'audio URL blob en Blob si présent
+    let audioBlob = null;
+    if (recipe.audioUrl) {
+      audioBlob = await urlToBlob(recipe.audioUrl);
+    }
+    
     // Préparer la recette pour le stockage
     const recipeToSave = {
       // Métadonnées
@@ -417,6 +468,9 @@ export async function saveRecipe(recipe) {
       
       // Thumbnail pour la liste (petit, en Blob)
       thumbnailBlob: base64ToBlob(thumbnail),
+      
+      // Audio du chef en Blob
+      audioBlob: audioBlob,
       
       // Instructions avec illustrations compressées en Blob
       instructionsData: compressedInstructions,
@@ -554,6 +608,9 @@ export async function getRecipeById(recipeId) {
               illustration: await blobToBase64(inst.illustrationBlob),
             }))
           ),
+          
+          // Audio du chef (convertir Blob en URL blob)
+          audioUrl: recipe.audioBlob ? URL.createObjectURL(recipe.audioBlob) : null,
         };
         
         resolve(result);

@@ -259,12 +259,25 @@ export async function generateFullRecipe(params, onProgress) {
       }
     }
     
+    // Générer l'audio du commentaire du chef
+    let audioUrl = null;
+    if (recipe.chefComment) {
+      onProgress?.({ step: 'audio', message: 'Génération de l\'audio du chef...' });
+      try {
+        audioUrl = await generateChefAudio(recipe.chefComment);
+      } catch (error) {
+        console.error('Erreur génération audio:', error);
+        // On continue sans audio si erreur
+      }
+    }
+    
     onProgress?.({ step: 'done', message: 'Terminé !' });
     
     return {
       ...recipe,
       instructions: instructionsWithIllustrations,
       image: imageUrl,
+      audioUrl: audioUrl, // URL de l'audio généré
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -310,6 +323,92 @@ export async function generateChefAudio(text) {
     return URL.createObjectURL(audioBlob);
   } catch (error) {
     console.error('Erreur OpenAI (TTS):', error);
+    throw error;
+  }
+}
+
+/**
+ * Extrait et formate les ingrédients d'une recette pour une liste de courses
+ * @param {Object} recipe - La recette complète
+ * @returns {Promise<Array>} Liste formatée des ingrédients
+ */
+export async function extractShoppingList(recipe) {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    throw new Error('Clé API OpenAI non configurée');
+  }
+
+  // Construire le texte de la recette pour GPT
+  const recipeText = `
+Titre: ${recipe.title}
+Catégorie: ${recipe.category}
+Portions: ${recipe.servings}
+
+Ingrédients:
+${recipe.ingredients?.map(section => {
+  const sectionTitle = section.section ? `${section.section}:\n` : '';
+  return sectionTitle + section.items?.map(item => `- ${item}`).join('\n');
+}).join('\n\n')}
+
+Instructions:
+${recipe.instructions?.map((inst, i) => {
+  const text = typeof inst === 'string' ? inst : inst.text;
+  return `${i + 1}. ${text}`;
+}).join('\n\n')}
+  `.trim();
+
+  const systemPrompt = `Tu es un assistant qui extrait et formate les ingrédients d'une recette pour créer une liste de courses pratique.
+
+Analyse la recette et extrais TOUS les ingrédients nécessaires. Pour chaque ingrédient, normalise la quantité et le format.
+
+Retourne un JSON avec cette structure exacte:
+{
+  "ingredients": [
+    {
+      "name": "Nom de l'ingrédient (sans quantité)",
+      "quantity": "Quantité normalisée (ex: '500g', '2', '1 cuillère à soupe')",
+      "category": "FRUITS_LEGUMES" | "VIANDES_POISSONS" | "EPICERIE" | "PRODUITS_LAITIERS" | "BOULANGERIE" | "AUTRES"
+    }
+  ]
+}
+
+Règles importantes:
+- Regroupe les ingrédients similaires (ex: "oignon" et "oignon jaune" → "oignon")
+- Normalise les unités (g, kg, ml, cl, L, cuillères, etc.)
+- Si une quantité est mentionnée plusieurs fois, additionne-les
+- Classe par catégorie logique
+- Garde les quantités exactes de la recette`;
+
+  try {
+    const response = await fetch(`${API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // Utiliser mini pour réduire les coûts
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Extrais les ingrédients de cette recette:\n\n${recipeText}` },
+        ],
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Erreur lors de l\'extraction des ingrédients');
+    }
+
+    const data = await response.json();
+    const result = JSON.parse(data.choices[0].message.content);
+    
+    return result.ingredients || [];
+  } catch (error) {
+    console.error('Erreur extraction liste de courses:', error);
     throw error;
   }
 }

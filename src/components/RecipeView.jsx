@@ -10,6 +10,7 @@ import {
 } from './icons';
 import { saveRecipe } from '../services/storage';
 import { generateChefAudio } from '../services/openai';
+import ShoppingListModal from './ShoppingListModal';
 import './RecipeView.css';
 
 export default function RecipeView({ recipe, onBack, onSaved }) {
@@ -18,6 +19,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
+  const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   
   // États pour l'audio du chef
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -79,15 +81,31 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       return;
     }
     
-    // Sinon on génère l'audio
-    setIsLoadingAudio(true);
-    setAudioError(null);
+    // Utiliser l'audio pré-généré si disponible, sinon générer à la demande
+    let audioUrlToUse = recipe.audioUrl;
     
-    try {
-      const audioUrl = await generateChefAudio(recipe.chefComment);
-      audioUrlRef.current = audioUrl;
+    if (!audioUrlToUse) {
+      // Fallback : générer l'audio pour les anciennes recettes
+      setIsLoadingAudio(true);
+      setAudioError(null);
       
-      const audio = new Audio(audioUrl);
+      try {
+        audioUrlToUse = await generateChefAudio(recipe.chefComment);
+      } catch (error) {
+        console.error('Erreur TTS:', error);
+        setAudioError(error.message || 'Erreur lors de la génération audio');
+        setIsLoadingAudio(false);
+        return;
+      } finally {
+        setIsLoadingAudio(false);
+      }
+    }
+    
+    // Charger et jouer l'audio
+    try {
+      audioUrlRef.current = audioUrlToUse;
+      
+      const audio = new Audio(audioUrlToUse);
       audioRef.current = audio;
       
       audio.onended = () => {
@@ -102,10 +120,8 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       await audio.play();
       setIsPlayingAudio(true);
     } catch (error) {
-      console.error('Erreur TTS:', error);
-      setAudioError(error.message || 'Erreur lors de la génération audio');
-    } finally {
-      setIsLoadingAudio(false);
+      console.error('Erreur lecture audio:', error);
+      setAudioError('Erreur lors de la lecture audio');
     }
   };
 
@@ -368,27 +384,44 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
           {/* Colonne droite: Image pleine hauteur */}
           <div className="recipe-column recipe-image-column">
             {displayImage && (
-              <div 
-                className="recipe-image-container"
-                onClick={openImageFullscreen}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && openImageFullscreen()}
-                aria-label="Agrandir l'image"
-              >
-                <img 
-                  src={displayImage} 
-                  alt={recipe.title}
-                  className="recipe-image"
-                />
-                <div className="image-zoom-hint">
-                  <span>🔍</span>
+              <>
+                <div 
+                  className="recipe-image-container"
+                  onClick={openImageFullscreen}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && openImageFullscreen()}
+                  aria-label="Agrandir l'image"
+                >
+                  <img 
+                    src={displayImage} 
+                    alt={recipe.title}
+                    className="recipe-image"
+                  />
+                  <div className="image-zoom-hint">
+                    <span>🔍</span>
+                  </div>
                 </div>
-              </div>
+                {/* Bouton liste de courses (non imprimé) */}
+                <button
+                  className="btn-secondary shopping-list-btn no-print"
+                  onClick={() => setIsShoppingListOpen(true)}
+                  aria-label="Créer ma liste de courses"
+                >
+                  🛒 Ma liste de courses pour cette recette
+                </button>
+              </>
             )}
           </div>
         </div>
       </div>
+
+      {/* Modale liste de courses */}
+      <ShoppingListModal
+        isOpen={isShoppingListOpen}
+        onClose={() => setIsShoppingListOpen(false)}
+        recipe={recipe}
+      />
     </div>
   );
 }

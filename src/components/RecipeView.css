@@ -223,6 +223,8 @@
 /* ===== RECIPE IMAGE - PLEINE HAUTEUR ===== */
 .recipe-image-column {
   display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
 }
 
 .recipe-image-container {
@@ -277,6 +279,31 @@
   opacity: 0.7;
   transition: opacity var(--transition-fast);
   pointer-events: none;
+}
+
+/* ===== SHOPPING LIST BUTTON ===== */
+.shopping-list-btn {
+  width: 100%;
+  padding: var(--spacing-md);
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+  transition: all var(--transition-fast);
+}
+
+.shopping-list-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+@media (min-width: 700px) {
+  .shopping-list-btn {
+    margin-top: 0;
+  }
 }
 
 /* ===== IMAGE LIGHTBOX ===== */
@@ -536,24 +563,31 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 15mm;
+    margin: 15mm 12mm;
   }
   
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
+    box-shadow: none !important;
   }
   
   html, body {
-    width: 210mm;
-    height: 297mm;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: #ffffff !important;
   }
   
   .recipe-view {
     min-height: auto;
     background: #ffffff !important;
     padding: 0;
+    margin: 0;
+    width: 100%;
+    display: block;
   }
   
   .no-print,
@@ -568,12 +602,13 @@
   
   .instruction-illustration {
     cursor: default !important;
+    page-break-inside: avoid;
   }
   
   .instruction-illustration:hover {
     transform: none !important;
-    box-shadow: var(--shadow-soft) !important;
-    border-color: var(--color-border-light) !important;
+    box-shadow: none !important;
+    border-color: #ddd !important;
   }
   
   .instruction-item.has-illustration {
@@ -582,149 +617,423 @@
   }
   
   .instruction-illustration {
-    margin-top: 6px;
-    margin-bottom: 4px;
+    margin-top: 8px;
+    margin-bottom: 8px;
     border: 1px solid #ddd;
     border-radius: 2px;
     max-width: 100%;
+    page-break-inside: avoid;
   }
   
   .step-illustration-image {
     max-width: 100%;
     height: auto;
+    display: block;
   }
   
   .recipe-content {
-    max-width: none;
-    padding: 0;
-    margin: 0;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    page-break-inside: avoid; /* Éviter les coupures dans le contenu principal */
   }
   
+  /* Grouper tout le début (badge, titre, meta, image, ingrédients) */
+  .category-badge,
+  .recipe-title,
+  .recipe-meta,
+  .recipe-image-column,
+  .ingredients-section {
+    page-break-before: avoid;
+  }
+  
+  /* Badge, titre et métadonnées ensemble sur la première page - marges réduites */
   .category-badge {
-    margin-bottom: 8px;
-    font-size: 9pt;
-    padding: 2px 8px;
+    display: inline-block;
+    margin-bottom: 6px;
+    font-size: 8.5pt;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-weight: 600;
+    page-break-after: avoid;
+    page-break-before: avoid;
   }
   
   .recipe-title {
     font-size: 18pt;
-    margin-bottom: 10px;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    padding: 0;
+    line-height: 1.15;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+    page-break-before: avoid;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
   
   .recipe-meta {
+    display: flex;
+    justify-content: center;
     padding: 8px 0;
-    margin-bottom: 12px;
-    gap: 30px;
+    margin: 0 0 8px 0;
+    gap: 20px;
     border-top: 1px solid #ddd;
     border-bottom: 1px solid #ddd;
+    page-break-inside: avoid;
+    page-break-after: avoid;
+    page-break-before: avoid;
+  }
+  
+  .meta-item {
+    min-width: 45px;
   }
   
   .meta-item svg {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
+  }
+  
+  .meta-value {
+    font-size: 7.5pt;
+  }
+  
+  /* Grouper badge + titre + meta ensemble */
+  .category-badge,
+  .recipe-title,
+  .recipe-meta {
+    page-break-after: avoid;
+  }
+  
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-width: 50px;
+  }
+  
+  .meta-item svg {
+    width: 18px;
+    height: 18px;
   }
   
   .meta-value {
     font-size: 8pt;
+    font-weight: 500;
   }
   
+  /* Layout en une seule colonne pour l'impression */
   .recipe-layout {
-    display: grid;
-    grid-template-columns: 55% 45%;
-    gap: 15px;
-    align-items: start;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* FORCER L'ORDRE : Image d'abord, puis ingrédients, puis instructions */
+  .recipe-image-column {
+    order: 1 !important; /* Image en premier */
+    width: 100% !important;
+    margin: 0 0 12px 0 !important;
+    padding: 0 !important;
+    page-break-after: avoid;
+    page-break-before: avoid; /* Reste avec badge/titre/meta */
+    page-break-inside: avoid;
   }
   
   .recipe-text-column {
-    order: -1;
+    order: 2 !important; /* Ingrédients et instructions après */
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
-  .recipe-image-column {
-    order: 0;
+  /* Page 1 : Photo + Ingrédients (image cropée en hauteur si nécessaire) */
+  
+  .recipe-image-container {
+    width: 100% !important;
+    height: 60mm !important; /* Hauteur réduite pour garantir que les ingrédients rentrent toujours */
+    position: relative !important;
+    top: 0 !important;
+    border-radius: 4px;
+    box-shadow: none !important;
+    border: 1px solid #ddd;
+    margin: 0 0 8px 0;
+    page-break-inside: avoid;
+    page-break-after: avoid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    overflow: hidden; /* Cache ce qui dépasse */
+  }
+  
+  .recipe-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important; /* Crop l'image pour remplir */
+    display: block;
+  }
+  
+  /* Optimiser l'espace des ingrédients */
+  .ingredients-box {
+    padding: 10px !important; /* Réduire le padding */
+    page-break-inside: avoid;
+  }
+  
+  .ingredient-group {
+    margin-bottom: 6px !important; /* Réduire l'espace entre groupes */
+  }
+  
+  .ingredient-group:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  .ingredient-group-title {
+    font-size: 9pt !important;
+    margin-bottom: 4px !important;
+  }
+  
+  .ingredient-item {
+    font-size: 8.5pt !important; /* Réduire légèrement la taille */
+    padding: 1px 0 !important; /* Réduire l'espacement */
+    line-height: 1.4 !important; /* Réduire l'interligne */
   }
   
   .section-title {
-    font-size: 10pt;
-    margin-bottom: 6px;
-    padding-bottom: 3px;
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 20px 0 10px 0;
+    padding: 0 0 5px 0;
+    border-bottom: 2px solid #333;
+    page-break-after: avoid;
   }
   
+  
+  /* Ingrédients sur la page 1 avec la photo - FORCER sur même page */
   .ingredients-section {
-    margin-bottom: 12px;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+    page-break-before: avoid; /* Pas de saut avant */
+    page-break-after: always; /* Force nouvelle page après les ingrédients */
+  }
+  
+  .ingredients-section .section-title {
+    font-size: 10pt;
+    margin: 0 0 6px 0;
+    padding-bottom: 4px;
+  }
+  
+  /* S'assurer que l'image et les ingrédients restent ensemble */
+  .recipe-image-column {
+    page-break-after: avoid;
+  }
+  
+  .recipe-image-column + .recipe-text-column .ingredients-section {
+    page-break-before: avoid;
   }
   
   .ingredients-box {
     background: #E8F5E9 !important;
     border: 1px solid #C8E6C9 !important;
-    padding: 10px;
+    padding: 15px;
     border-radius: 4px;
-  }
-  
-  .ingredient-group {
-    margin-bottom: 8px;
+    page-break-inside: avoid;
+    margin-top: 10px;
   }
   
   .ingredient-group-title {
-    font-size: 9pt;
-    margin-bottom: 3px;
+    font-size: 10pt;
+    font-weight: 600;
+    margin: 0 0 8px 0;
   }
   
   .ingredient-item {
-    font-size: 8.5pt;
-    padding: 1px 0;
-    line-height: 1.4;
+    font-size: 9.5pt;
+    padding: 3px 0;
+    line-height: 1.6;
+  }
+  
+  .ingredient-group {
+    margin-bottom: 10px;
+  }
+  
+  .ingredient-group:last-child {
+    margin-bottom: 0;
+  }
+  
+  .ingredient-group-title {
+    font-size: 9.5pt;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+  }
+  
+  .ingredient-list {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .ingredient-item {
+    font-size: 9pt;
+    padding: 2px 0;
+    line-height: 1.5;
+    page-break-inside: avoid;
   }
   
   .ingredient-bullet {
     color: #4CAF50 !important;
+    font-weight: bold;
   }
   
-  .recipe-image-container {
-    height: auto !important;
-    max-height: none;
-    position: relative !important;
-    top: 0 !important;
-    border-radius: 4px;
-    box-shadow: none;
-    border: 1px solid #ddd;
-  }
-  
-  .recipe-image {
-    width: 100%;
-    height: auto;
-    max-height: 180mm;
-    object-fit: contain;
-  }
-  
+  /* Instructions : 1 étape = 1 page */
   .instructions-section {
-    margin-top: 12px;
+    margin: 0;
+    page-break-before: always; /* Nouvelle page pour les instructions (après les ingrédients) */
   }
   
   .instructions-list {
-    page-break-inside: avoid;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
   
-  .instruction-item {
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    padding-top: 10px;
+  /* Le titre "Préparation" sur la page de la première étape */
+  .instructions-section .section-title {
+    page-break-after: avoid;
+    page-break-before: avoid;
     page-break-inside: avoid;
+    margin: 0 0 10px 0;
+    font-size: 12pt;
+    font-weight: 600;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #333;
+  }
+  
+  /* Le titre et la première étape ensemble */
+  .instructions-section .section-title + .instructions-list {
+    page-break-before: avoid;
+  }
+  
+  .instructions-section .section-title + .instructions-list > .instruction-item:first-child {
+    page-break-before: avoid;
+    padding-top: 0;
+  }
+  
+  /* Chaque étape (texte + croquis) sur une page séparée */
+  .instruction-item {
+    margin: 0;
+    padding: 20px 0;
+    page-break-inside: avoid; /* Texte + croquis ensemble */
+    page-break-after: always; /* Force nouvelle page après chaque étape */
+    border: none;
+    display: block; /* Simplifier le layout */
+    min-height: 0; /* Pas de hauteur minimale */
+  }
+  
+  /* Première étape : nouvelle page (après les ingrédients) */
+  .instruction-item:first-child {
+    page-break-before: always;
+    padding-top: 5px;
+  }
+  
+  /* Autres étapes : nouvelle page avant */
+  .instruction-item:not(:first-child) {
+    page-break-before: always;
+    padding-top: 5px;
+  }
+  
+  /* Dernière étape : pas de saut après */
+  .instruction-item:last-child {
+    page-break-after: auto;
+    min-height: 0; /* Pas de hauteur minimale */
+  }
+  
+  /* S'assurer que toutes les illustrations sont imprimées (y compris la dernière) */
+  .instruction-item .instruction-illustration {
+    display: block !important;
+    visibility: visible !important;
+  }
+  
+  .instruction-item .step-illustration-image {
+    display: block !important;
+    visibility: visible !important;
   }
   
   .instruction-number {
-    width: 20px;
-    height: 20px;
-    font-size: 9pt;
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    line-height: 32px;
+    text-align: center;
+    font-size: 12pt;
+    font-weight: 600;
     background: var(--color-accent) !important;
     color: white !important;
-    margin-bottom: 4px;
-    margin-right: 6px;
+    margin: 0 0 15px 0;
+    border-radius: 50%;
+    vertical-align: top;
+  }
+  
+  .instruction-content {
+    display: block;
+    width: 100%;
+    page-break-inside: avoid; /* Texte et croquis ensemble */
   }
   
   .instruction-text {
-    font-size: 9pt;
-    line-height: 1.5;
-    display: inline-block;
+    font-size: 12pt;
+    line-height: 1.8;
+    margin: 0 0 20px 0;
+    padding: 0;
+    display: block;
     width: 100%;
+    color: #333;
+    text-align: justify;
+    page-break-after: avoid; /* Texte et croquis ensemble */
+  }
+  
+  /* Éviter les coupures dans les éléments importants */
+  .category-badge,
+  .recipe-title,
+  .recipe-meta {
+    page-break-after: avoid;
+  }
+  
+  /* Croquis sur la même page que le texte de l'étape */
+  .instruction-illustration {
+    page-break-inside: avoid;
+    page-break-before: avoid; /* Reste avec le texte */
+    page-break-after: avoid;
+    margin: 15px 0 0 0;
+    display: block !important; /* Forcer l'affichage */
+    max-height: 200mm; /* Limite la hauteur max */
+    background: #fafafa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 12px;
+    text-align: center;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  .step-illustration-image {
+    max-width: 100%;
+    max-height: 200mm;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block !important; /* Forcer l'affichage */
+    margin: 0 auto;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Si pas d'illustration */
+  .instruction-item:not(.has-illustration) .instruction-text {
+    font-size: 13pt;
+    line-height: 2;
   }
 }

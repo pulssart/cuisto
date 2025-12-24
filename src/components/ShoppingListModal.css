@@ -1,0 +1,223 @@
+/* ===== SHOPPING LIST MODAL ===== */
+.shopping-list-overlay {
+  z-index: 2000;
+}
+
+.shopping-list-modal {
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.shopping-list-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+}
+
+/* ===== LOADING & ERROR ===== */
+.shopping-list-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-2xl);
+  gap: var(--spacing-lg);
+}
+
+.shopping-list-loading .spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--color-border-light);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.shopping-list-error {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text);
+}
+
+.shopping-list-empty {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-light);
+}
+
+/* ===== ACTIONS ===== */
+.shopping-list-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 2px solid var(--color-border-light);
+}
+
+/* ===== CONTENT ===== */
+.shopping-list-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.shopping-category {
+  background: var(--color-background-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+}
+
+.category-title {
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 var(--spacing-md) 0;
+  color: var(--color-text);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.shopping-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.shopping-item {
+  margin: 0;
+  padding: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.shopping-item.checked {
+  opacity: 0.5;
+}
+
+.shopping-item.checked .shopping-item-name {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.shopping-item-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+  user-select: none;
+}
+
+.shopping-item-label:hover {
+  background: var(--color-background);
+}
+
+.shopping-checkbox {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.shopping-item-quantity {
+  font-weight: 600;
+  color: var(--color-accent);
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+.shopping-item-name {
+  flex: 1;
+  color: var(--color-text);
+  font-size: 0.95rem;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .shopping-list-overlay {
+    position: static;
+    background: transparent;
+  }
+
+  .shopping-list-modal {
+    max-width: 100%;
+    max-height: none;
+    box-shadow: none;
+    border: none;
+  }
+
+  .modal-header,
+  .shopping-list-actions {
+    display: none !important;
+  }
+
+  .shopping-list-body {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .shopping-category {
+    page-break-inside: avoid;
+    margin-bottom: 15px;
+    background: transparent;
+    border: 1px solid #ddd;
+    padding: 10px;
+  }
+
+  .category-title {
+    font-size: 11pt;
+    margin-bottom: 8px;
+    border-bottom: 2px solid #333;
+  }
+
+  .shopping-item {
+    page-break-inside: avoid;
+  }
+
+  .shopping-item-label {
+    padding: 4px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .shopping-checkbox {
+    width: 16px;
+    height: 16px;
+    order: 1; /* Checkbox en premier */
+  }
+
+  .shopping-item-quantity {
+    font-size: 9pt;
+    min-width: 80px;
+    text-align: left; /* Quantité alignée à gauche */
+    order: 2; /* Quantité en deuxième */
+  }
+
+  .shopping-item-name {
+    font-size: 10pt;
+    text-align: right; /* Ingrédient aligné à droite */
+    flex: 1;
+    order: 3; /* Nom en dernier */
+  }
+
+  /* Masquer les items cochés à l'impression si souhaité */
+  .shopping-item.checked {
+    display: none;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
