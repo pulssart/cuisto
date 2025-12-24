@@ -144,7 +144,7 @@ export async function generateRecipeImage(imagePrompt) {
         n: 1,
         size: '1024x1024',
         quality: 'high',
-        response_format: 'b64_json', // Force le retour en base64 pour stockage local
+        // Note: gpt-image-1.5 retourne du base64 par défaut dans b64_json
       }),
     });
 
@@ -193,7 +193,7 @@ export async function generateStepIllustration(illustrationPrompt) {
         n: 1,
         size: '1024x1024',
         quality: 'medium',
-        response_format: 'b64_json', // Force le retour en base64 pour stockage local
+        // Note: gpt-image-1.5 retourne du base64 par défaut dans b64_json
       }),
     });
 
