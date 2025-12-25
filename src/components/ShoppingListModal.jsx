@@ -12,21 +12,28 @@ export default function ShoppingListModal({ isOpen, onClose, recipe }) {
   // Réinitialiser quand la modale s'ouvre
   useEffect(() => {
     if (isOpen && recipe) {
-      setLoading(true);
-      setError(null);
       setCheckedItems(new Set());
       
-      extractShoppingList(recipe)
-        .then((extracted) => {
+      // Utiliser la liste de courses pré-générée si disponible, sinon l'extraire
+      if (recipe.shoppingList && Array.isArray(recipe.shoppingList) && recipe.shoppingList.length > 0) {
+        setIngredients(recipe.shoppingList);
+        setLoading(false);
+        setError(null);
+      } else {
+        // Fallback pour les anciennes recettes : extraire à la volée
+        setLoading(true);
+        setError(null);
+        
+        try {
+          const extracted = extractShoppingList(recipe);
           setIngredients(extracted);
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error('Erreur extraction:', err);
           setError(err.message || 'Erreur lors de l\'extraction des ingrédients');
-        })
-        .finally(() => {
+        } finally {
           setLoading(false);
-        });
+        }
+      }
     }
   }, [isOpen, recipe]);
 

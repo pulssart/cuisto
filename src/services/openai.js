@@ -273,6 +273,10 @@ export async function generateFullRecipe(params, onProgress) {
       }
     }
     
+    // Générer la liste de courses depuis les ingrédients
+    onProgress?.({ step: 'shopping', message: 'Préparation de la liste de courses...' });
+    const shoppingList = extractShoppingList(recipe);
+    
     onProgress?.({ step: 'done', message: 'Terminé !' });
     
     return {
@@ -280,6 +284,7 @@ export async function generateFullRecipe(params, onProgress) {
       instructions: instructionsWithIllustrations,
       image: imageUrl,
       audioUrl: audioUrl, // URL de l'audio généré
+      shoppingList: shoppingList, // Liste de courses pré-générée
       generatedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -331,88 +336,80 @@ export async function generateChefAudio(text) {
 
 /**
  * Extrait et formate les ingrédients d'une recette pour une liste de courses
+ * Parse directement les ingrédients sans utiliser GPT
  * @param {Object} recipe - La recette complète
- * @returns {Promise<Array>} Liste formatée des ingrédients
+ * @returns {Array} Liste formatée des ingrédients
  */
-export async function extractShoppingList(recipe) {
-  const apiKey = getApiKey();
+export function extractShoppingList(recipe) {
+  if (!recipe.ingredients || !Array.isArray(recipe.ingredients)) {
+    return [];
+  }
+
+  const ingredientsMap = new Map();
   
-  if (!apiKey) {
-    throw new Error('Clé API OpenAI non configurée');
-  }
+  // Catégories de base pour classifier les ingrédients
+  const categoryKeywords = {
+    FRUITS_LEGUMES: ['fruits', 'fruit', 'légumes', 'légume', 'tomate', 'oignon', 'ail', 'carotte', 'pomme', 'banane', 'citron', 'orange', 'salade', 'épinard', 'courgette', 'aubergine', 'poivron', 'champignon', 'avocat', 'fraise', 'framboise', 'myrtille'],
+    VIANDES_POISSONS: ['viande', 'boeuf', 'porc', 'poulet', 'volaille', 'agneau', 'canard', 'poisson', 'saumon', 'thon', 'cabillaud', 'crevette', 'coquille', 'moule', 'huître', 'jambon', 'lard', 'bacon', 'chorizo'],
+    PRODUITS_LAITIERS: ['lait', 'crème', 'beurre', 'fromage', 'yaourt', 'yogourt', 'mascarpone', 'ricotta', 'mozzarella', 'parmesan', 'emmental', 'chèvre'],
+    BOULANGERIE: ['pain', 'baguette', 'brioche', 'croissant', 'pâte', 'farine', 'levure'],
+    EPICERIE: ['huile', 'vinaigre', 'sel', 'poivre', 'sucre', 'miel', 'épice', 'curry', 'cumin', 'paprika', 'cannelle', 'vanille', 'riz', 'pâtes', 'semoule', 'couscous', 'lentille', 'haricot', 'pois chiche', 'olive', 'câpre', 'cornichon'],
+  };
 
-  // Construire le texte de la recette pour GPT
-  const recipeText = `
-Titre: ${recipe.title}
-Catégorie: ${recipe.category}
-Portions: ${recipe.servings}
-
-Ingrédients:
-${recipe.ingredients?.map(section => {
-  const sectionTitle = section.section ? `${section.section}:\n` : '';
-  return sectionTitle + section.items?.map(item => `- ${item}`).join('\n');
-}).join('\n\n')}
-
-Instructions:
-${recipe.instructions?.map((inst, i) => {
-  const text = typeof inst === 'string' ? inst : inst.text;
-  return `${i + 1}. ${text}`;
-}).join('\n\n')}
-  `.trim();
-
-  const systemPrompt = `Tu es un assistant qui extrait et formate les ingrédients d'une recette pour créer une liste de courses pratique.
-
-Analyse la recette et extrais TOUS les ingrédients nécessaires. Pour chaque ingrédient, normalise la quantité et le format.
-
-Retourne un JSON avec cette structure exacte:
-{
-  "ingredients": [
-    {
-      "name": "Nom de l'ingrédient (sans quantité)",
-      "quantity": "Quantité normalisée (ex: '500g', '2', '1 cuillère à soupe')",
-      "category": "FRUITS_LEGUMES" | "VIANDES_POISSONS" | "EPICERIE" | "PRODUITS_LAITIERS" | "BOULANGERIE" | "AUTRES"
+  // Fonction pour déterminer la catégorie d'un ingrédient
+  const getCategory = (ingredientName) => {
+    const lowerName = ingredientName.toLowerCase();
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+      if (keywords.some(keyword => lowerName.includes(keyword))) {
+        return category;
+      }
     }
-  ]
-}
+    return 'AUTRES';
+  };
 
-Règles importantes:
-- Regroupe les ingrédients similaires (ex: "oignon" et "oignon jaune" → "oignon")
-- Normalise les unités (g, kg, ml, cl, L, cuillères, etc.)
-- Si une quantité est mentionnée plusieurs fois, additionne-les
-- Classe par catégorie logique
-- Garde les quantités exactes de la recette`;
-
-  try {
-    const response = await fetch(`${API_URL}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini', // Utiliser mini pour réduire les coûts
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Extrais les ingrédients de cette recette:\n\n${recipeText}` },
-        ],
-        temperature: 0.3,
-        response_format: { type: 'json_object' },
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Erreur lors de l\'extraction des ingrédients');
-    }
-
-    const data = await response.json();
-    const result = JSON.parse(data.choices[0].message.content);
+  // Parser chaque section d'ingrédients
+  recipe.ingredients.forEach(section => {
+    if (!section.items || !Array.isArray(section.items)) return;
     
-    return result.ingredients || [];
-  } catch (error) {
-    console.error('Erreur extraction liste de courses:', error);
-    throw error;
-  }
+    section.items.forEach(item => {
+      // Parser "quantité + nom" (ex: "500g de farine", "2 oignons", "1 cuillère à soupe d'huile")
+      const match = item.match(/^(.+?)\s+(?:de\s+|d'|du\s+|de la\s+|des\s+)?(.+)$/i) || 
+                    item.match(/^(\d+[^\w]*)\s*(.+)$/i) ||
+                    [null, '', item.trim()];
+      
+      const quantity = match[1]?.trim() || '';
+      const name = match[2]?.trim() || item.trim();
+      
+      // Normaliser le nom (enlever les pluriels, articles, etc.)
+      const normalizedName = name
+        .toLowerCase()
+        .replace(/^(les?|des?|du|de la|de l'|d')\s+/i, '')
+        .replace(/s$/, '') // Enlever pluriel simple
+        .trim();
+      
+      // Si l'ingrédient existe déjà, on additionne les quantités si possible
+      if (ingredientsMap.has(normalizedName)) {
+        const existing = ingredientsMap.get(normalizedName);
+        // Essayer d'additionner si les quantités sont numériques
+        const qtyMatch = quantity.match(/(\d+(?:[.,]\d+)?)/);
+        const existingQtyMatch = existing.quantity.match(/(\d+(?:[.,]\d+)?)/);
+        if (qtyMatch && existingQtyMatch) {
+          const total = parseFloat(qtyMatch[1].replace(',', '.')) + parseFloat(existingQtyMatch[1].replace(',', '.'));
+          existing.quantity = total.toString() + quantity.replace(/\d+(?:[.,]\d+)?/, '').trim();
+        } else {
+          existing.quantity = `${existing.quantity} + ${quantity}`;
+        }
+      } else {
+        ingredientsMap.set(normalizedName, {
+          name: name.charAt(0).toUpperCase() + name.slice(1), // Capitaliser première lettre
+          quantity: quantity || 'au goût',
+          category: getCategory(name),
+        });
+      }
+    });
+  });
+
+  return Array.from(ingredientsMap.values());
 }
 
 export { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS };

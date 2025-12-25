@@ -460,6 +460,7 @@ export async function saveRecipe(recipe) {
       restTime: recipe.restTime,
       chefComment: recipe.chefComment,
       ingredients: recipe.ingredients,
+      shoppingList: recipe.shoppingList || [], // Liste de courses
       generatedAt: recipe.generatedAt,
       savedAt: new Date().toISOString(),
       
@@ -592,6 +593,7 @@ export async function getRecipeById(recipeId) {
           restTime: recipe.restTime,
           chefComment: recipe.chefComment,
           ingredients: recipe.ingredients,
+          shoppingList: recipe.shoppingList || [], // Liste de courses
           generatedAt: recipe.generatedAt,
           savedAt: recipe.savedAt,
           

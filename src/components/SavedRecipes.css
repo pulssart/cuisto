@@ -99,6 +99,37 @@
   margin-bottom: var(--spacing-xl);
 }
 
+/* ===== RECIPES BY CATEGORY ===== */
+.recipes-by-category {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xl);
+}
+
+.category-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.category-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  padding-left: var(--spacing-md);
+  border-left: 4px solid;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.category-count {
+  font-size: 0.9rem;
+  font-weight: 400;
+  opacity: 0.7;
+}
+
 /* ===== RECIPES GRID ===== */
 .recipes-grid {
   display: grid;
