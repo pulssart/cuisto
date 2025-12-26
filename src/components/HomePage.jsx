@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChefHatIcon, SettingsIcon, BookmarkIcon } from './icons';
 import { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS, generateRandomRecipeIdea } from '../services/openai';
-import { hasApiKey, getRecipesCount } from '../services/storage';
+import { hasApiKey, getRecipesCount, getSavedRecipesAsync } from '../services/storage';
 import './HomePage.css';
 
 export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGenerating }) {
@@ -13,6 +13,7 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
   const [savedRecipesCount, setSavedRecipesCount] = useState(0);
   const [isLoadingRandom, setIsLoadingRandom] = useState(false);
   const [randomLimitInfo, setRandomLimitInfo] = useState(null);
+  const [polaroidImages, setPolaroidImages] = useState([]);
 
   const apiConfigured = hasApiKey();
 
@@ -97,6 +98,39 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
     loadCount();
   }, []);
 
+  // Charger les images des recettes pour le fond polaroïd
+  useEffect(() => {
+    const loadPolaroidImages = async () => {
+      try {
+        const recipes = await getSavedRecipesAsync();
+        // Filtrer les recettes qui ont une image (thumbnail)
+        const imagesWithTitles = recipes
+          .filter(recipe => recipe.thumbnail)
+          .slice(0, 20) // Limiter à 20 polaroïds pour éviter la surcharge
+          .map((recipe, index) => {
+            // Positionner de manière plus équilibrée
+            const row = Math.floor(index / 5);
+            const col = index % 5;
+            const x = (col * 20) + (Math.random() * 10);
+            const y = (row * 20) + (Math.random() * 10);
+            
+            return {
+              image: recipe.thumbnail,
+              title: recipe.title,
+              id: recipe.id,
+              x: Math.max(5, Math.min(85, x)), // Entre 5% et 85%
+              y: Math.max(5, Math.min(85, y)), // Entre 5% et 85%
+              rotation: (Math.random() * 20 - 10) // Entre -10° et +10°
+            };
+          });
+        setPolaroidImages(imagesWithTitles);
+      } catch (error) {
+        console.error('Erreur chargement images polaroïd:', error);
+      }
+    };
+    loadPolaroidImages();
+  }, []);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!prompt.trim() || !apiConfigured || isGenerating) return;
@@ -139,6 +173,33 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
 
   return (
     <div className="home-page">
+      {/* Fond polaroïd */}
+      {polaroidImages.length > 0 && (
+        <div className="polaroid-background">
+          {polaroidImages.map((item, index) => (
+            <div
+              key={item.id || index}
+              className="polaroid-item"
+              style={{
+                '--rotation': `${item.rotation}deg`,
+                '--x': `${item.x}%`,
+                '--y': `${item.y}%`,
+                '--delay': `${index * 0.05}s`
+              }}
+            >
+              <div className="polaroid-image-wrapper">
+                <img 
+                  src={item.image} 
+                  alt={item.title}
+                  className="polaroid-image"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Header */}
       <header className="home-header">
         <div className="header-actions">

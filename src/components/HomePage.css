@@ -11,6 +11,96 @@
     var(--color-background) 0%,
     var(--color-background-light) 100%
   );
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== POLAROID BACKGROUND ===== */
+.polaroid-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.polaroid-item {
+  position: absolute;
+  width: 120px;
+  height: 150px;
+  left: var(--x);
+  top: var(--y);
+  transform: rotate(var(--rotation));
+  opacity: 0.12;
+  animation: polaroidFadeIn 0.8s ease-out var(--delay) forwards;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.polaroid-item:hover {
+  opacity: 0.2;
+  transform: rotate(var(--rotation)) scale(1.1);
+}
+
+@keyframes polaroidFadeIn {
+  from {
+    opacity: 0;
+    transform: rotate(var(--rotation)) scale(0.8);
+  }
+  to {
+    opacity: 0.15;
+    transform: rotate(var(--rotation)) scale(1);
+  }
+}
+
+.polaroid-image-wrapper {
+  width: 100%;
+  height: 100%;
+  background: white;
+  padding: 8px 8px 30px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  transform: perspective(1000px) rotateY(0deg);
+  transition: transform 0.3s ease;
+}
+
+.polaroid-item:hover .polaroid-image-wrapper {
+  transform: perspective(1000px) rotateY(5deg) scale(1.05);
+}
+
+.polaroid-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 1px;
+}
+
+/* Overlay léger pour améliorer la lisibilité */
+.home-page::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Assurer que le contenu principal est au-dessus */
+.home-header,
+.home-hero,
+.home-form {
+  position: relative;
+  z-index: 1;
 }
 
 /* ===== HEADER ===== */
