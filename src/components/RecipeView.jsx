@@ -11,6 +11,8 @@ import {
 import { saveRecipe } from '../services/storage';
 import { generateChefAudio } from '../services/openai';
 import ShoppingListModal from './ShoppingListModal';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import './RecipeView.css';
 
 export default function RecipeView({ recipe, onBack, onSaved }) {
@@ -21,6 +23,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   
   // États pour l'audio du chef
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -28,6 +31,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [audioError, setAudioError] = useState(null);
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
+  const recipeContentRef = useRef(null);
 
   // Utilise l'image HD si disponible, sinon le thumbnail (pour recettes sauvegardées)
   const displayImage = recipe.image || recipe.thumbnail;
@@ -146,6 +150,160 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  // Génération du PDF et partage
+  const handleShare = async () => {
+    if (isSharing) return;
+    
+    setIsSharing(true);
+    
+    try {
+      // Attendre un peu pour s'assurer que le DOM est prêt
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Sélectionner le contenu à convertir (tout sauf le header)
+      const element = recipeContentRef.current || document.querySelector('.recipe-content');
+      if (!element) {
+        throw new Error('Contenu de la recette introuvable');
+      }
+
+      // Créer un clone pour l'impression (sans les éléments no-print)
+      const clone = element.cloneNode(true);
+      const noPrintElements = clone.querySelectorAll('.no-print');
+      noPrintElements.forEach(el => el.remove());
+      
+      // Créer un conteneur temporaire pour le clone avec les styles d'impression
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '210mm'; // Largeur A4
+      tempContainer.style.background = '#ffffff';
+      tempContainer.style.padding = '0';
+      tempContainer.style.margin = '0';
+      
+      // Créer un wrapper pour appliquer le scale
+      const scaleWrapper = document.createElement('div');
+      scaleWrapper.style.transform = 'scale(0.78)';
+      scaleWrapper.style.transformOrigin = 'top left';
+      scaleWrapper.style.width = '128.2%';
+      scaleWrapper.appendChild(clone);
+      tempContainer.appendChild(scaleWrapper);
+      
+      document.body.appendChild(tempContainer);
+
+      // Attendre que le layout soit calculé et que les images soient chargées
+      const images = clone.querySelectorAll('img');
+      const imagePromises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = resolve; // Continuer même si une image échoue
+          setTimeout(resolve, 3000); // Timeout après 3s
+        });
+      });
+      await Promise.all(imagePromises);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Convertir en canvas puis en PDF
+      const canvas = await html2canvas(tempContainer, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        width: tempContainer.scrollWidth,
+        height: tempContainer.scrollHeight,
+        allowTaint: true,
+      });
+
+      // Nettoyer le conteneur temporaire
+      document.body.removeChild(tempContainer);
+
+      // Créer le PDF
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const scaledWidth = imgWidth * ratio;
+      const scaledHeight = imgHeight * ratio;
+      
+      // Calculer le nombre de pages nécessaires
+      const totalPages = Math.ceil(scaledHeight / pdfHeight);
+      
+      for (let i = 0; i < totalPages; i++) {
+        if (i > 0) {
+          pdf.addPage();
+        }
+        const yPosition = -i * pdfHeight;
+        pdf.addImage(imgData, 'PNG', 0, yPosition, scaledWidth, scaledHeight);
+      }
+
+      // Générer le blob du PDF
+      const pdfBlob = pdf.output('blob');
+      const fileName = `${recipe.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
+      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      // Utiliser l'API Web Share si disponible (iOS/Android)
+      if (navigator.share) {
+        try {
+          // Vérifier si on peut partager des fichiers
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: recipe.title,
+              text: `Découvrez cette recette : ${recipe.title}`,
+              files: [file],
+            });
+          } else {
+            // Essayer de partager sans fichier (certains navigateurs)
+            await navigator.share({
+              title: recipe.title,
+              text: `Découvrez cette recette : ${recipe.title}`,
+            });
+            // Télécharger le PDF en parallèle
+            const url = URL.createObjectURL(pdfBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          }
+        } catch (shareError) {
+          // Si l'utilisateur annule le partage ou erreur, télécharger le PDF
+          if (shareError.name !== 'AbortError') {
+            console.error('Erreur partage:', shareError);
+          }
+          const url = URL.createObjectURL(pdfBlob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = fileName;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
+      } else {
+        // Fallback : télécharger le PDF
+        const url = URL.createObjectURL(pdfBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Erreur lors du partage:', error);
+      alert(error.message || 'Erreur lors de la génération du PDF');
+    } finally {
+      setIsSharing(false);
+    }
   };
 
   const openImageFullscreen = () => {
@@ -315,6 +473,20 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
             🖨️ Imprimer
           </button>
           <button 
+            className="btn-secondary share-btn"
+            onClick={handleShare}
+            disabled={isSharing}
+            aria-label="Partager la recette"
+          >
+            {isSharing ? (
+              <>
+                <span className="btn-spinner"></span> Génération...
+              </>
+            ) : (
+              <>📤 Partager</>
+            )}
+          </button>
+          <button 
             className={`btn-icon save-btn ${isSaved ? 'saved' : ''}`}
             onClick={handleSave}
             disabled={isSaved || saving}
@@ -326,7 +498,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       </header>
 
       {/* Contenu scrollable */}
-      <div className="recipe-content">
+      <div className="recipe-content" ref={recipeContentRef}>
         {/* Badge catégorie */}
         <div className="category-badge" style={{ backgroundColor: categoryColor }}>
           {recipe.category || 'PLATS'}
