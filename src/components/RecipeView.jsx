@@ -20,6 +20,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   
   // États pour l'audio du chef
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -165,6 +166,24 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     setSelectedStepIllustration(null);
   };
 
+  // Gestion du retour avec confirmation si recette non sauvegardée
+  const handleBackClick = () => {
+    if (!isSaved) {
+      setShowExitConfirm(true);
+    } else {
+      onBack();
+    }
+  };
+
+  const handleConfirmExit = () => {
+    setShowExitConfirm(false);
+    onBack();
+  };
+
+  const handleCancelExit = () => {
+    setShowExitConfirm(false);
+  };
+
 
   // Couleur selon la catégorie
   const getCategoryColor = (category) => {
@@ -238,9 +257,37 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       )}
 
 
+      {/* Modale de confirmation de sortie */}
+      {showExitConfirm && (
+        <div className="exit-confirm-overlay" onClick={handleCancelExit}>
+          <div className="exit-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="exit-confirm-icon">⚠️</div>
+            <h3 className="exit-confirm-title">Attention</h3>
+            <p className="exit-confirm-message">
+              Cette recette n'a pas encore été sauvegardée. Si vous quittez maintenant, 
+              vous perdrez définitivement cette recette générée.
+            </p>
+            <div className="exit-confirm-actions">
+              <button 
+                className="btn-secondary exit-confirm-cancel"
+                onClick={handleCancelExit}
+              >
+                Annuler
+              </button>
+              <button 
+                className="btn-primary exit-confirm-confirm"
+                onClick={handleConfirmExit}
+              >
+                Quitter quand même
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header avec navigation */}
       <header className="recipe-header no-print">
-        <button className="btn-icon" onClick={onBack} aria-label="Retour">
+        <button className="btn-icon" onClick={handleBackClick} aria-label="Retour">
           <ArrowLeftIcon size={22} />
         </button>
         <div className="header-actions">
