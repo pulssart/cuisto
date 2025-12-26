@@ -104,25 +104,45 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
       try {
         const recipes = await getSavedRecipesAsync();
         // Filtrer les recettes qui ont une image (thumbnail)
-        const imagesWithTitles = recipes
-          .filter(recipe => recipe.thumbnail)
-          .slice(0, 20) // Limiter à 20 polaroïds pour éviter la surcharge
-          .map((recipe, index) => {
-            // Positionner de manière plus équilibrée
-            const row = Math.floor(index / 5);
-            const col = index % 5;
-            const x = (col * 20) + (Math.random() * 10);
-            const y = (row * 20) + (Math.random() * 10);
-            
-            return {
-              image: recipe.thumbnail,
-              title: recipe.title,
-              id: recipe.id,
-              x: Math.max(5, Math.min(85, x)), // Entre 5% et 85%
-              y: Math.max(5, Math.min(85, y)), // Entre 5% et 85%
-              rotation: (Math.random() * 20 - 10) // Entre -10° et +10°
-            };
-          });
+        const filteredRecipes = recipes.filter(recipe => recipe.thumbnail).slice(0, 20);
+        
+        // Calculer les dimensions d'un polaroïd en pourcentage
+        // Polaroid: 200px × 250px, on suppose une largeur d'écran de 1920px
+        const polaroidWidthPercent = (200 / 1920) * 100; // ~10.4%
+        const polaroidHeightPercent = (250 / 1080) * 100; // ~23.1%
+        
+        // Créer une grille pour mieux répartir
+        const cols = Math.ceil(Math.sqrt(filteredRecipes.length * 1.5)); // Plus de colonnes que de lignes
+        const rows = Math.ceil(filteredRecipes.length / cols);
+        
+        const imagesWithTitles = filteredRecipes.map((recipe, index) => {
+          const col = index % cols;
+          const row = Math.floor(index / cols);
+          
+          // Position de base dans la grille
+          const baseX = (col / cols) * 100;
+          const baseY = (row / rows) * 100;
+          
+          // Ajouter une variation aléatoire mais limitée pour éviter les chevauchements
+          const maxVariationX = Math.min(15, (100 / cols) - polaroidWidthPercent - 2);
+          const maxVariationY = Math.min(15, (100 / rows) - polaroidHeightPercent - 2);
+          
+          const variationX = (Math.random() - 0.5) * maxVariationX;
+          const variationY = (Math.random() - 0.5) * maxVariationY;
+          
+          // Calculer la position finale
+          const x = Math.max(2, Math.min(88, baseX + variationX));
+          const y = Math.max(2, Math.min(88, baseY + variationY));
+          
+          return {
+            image: recipe.thumbnail,
+            title: recipe.title,
+            id: recipe.id,
+            x: x,
+            y: y,
+            rotation: (Math.random() * 20 - 10) // Entre -10° et +10°
+          };
+        });
         setPolaroidImages(imagesWithTitles);
       } catch (error) {
         console.error('Erreur chargement images polaroïd:', error);
