@@ -177,9 +177,9 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
         {/* Prompt */}
         <div className="form-section prompt-section">
           <div className="prompt-header">
-            <label htmlFor="prompt" className="form-label">
-              Quelle est votre envie ?
-            </label>
+          <label htmlFor="prompt" className="form-label">
+            Quelle est votre envie ?
+          </label>
             <button
               type="button"
               className="btn-random"

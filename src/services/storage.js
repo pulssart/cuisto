@@ -205,12 +205,12 @@ async function createThumbnail(base64, maxSize = 200) {
       let { width, height } = img;
       
       // Redimensionner proportionnellement
-      if (width > height) {
+        if (width > height) {
         if (width > maxSize) {
           height = (height / width) * maxSize;
           width = maxSize;
         }
-      } else {
+        } else {
         if (height > maxSize) {
           width = (width / height) * maxSize;
           height = maxSize;
@@ -281,8 +281,8 @@ export async function saveApiKey(apiKey) {
     localStorage.setItem(LEGACY_KEYS.API_KEY, apiKey);
     return true;
   }
-}
-
+  }
+  
 /**
  * Récupère la clé API OpenAI
  * @returns {Promise<string|null>}
@@ -315,8 +315,8 @@ export async function getApiKeyAsync() {
  */
 export function getApiKey() {
   return localStorage.getItem(LEGACY_KEYS.API_KEY);
-}
-
+  }
+  
 /**
  * Supprime la clé API
  * @returns {Promise<boolean>}
@@ -710,8 +710,8 @@ export async function getStorageUsage() {
         available: estimate.quota || 0,
         percentage: estimate.quota ? Math.round((estimate.usage / estimate.quota) * 100) : 0,
       };
-    }
-    
+}
+
     // Fallback: estimation basée sur le nombre de recettes
     const count = await getRecipesCount();
     const estimatedUsed = count * 1.5 * 1024 * 1024; // ~1.5 MB par recette

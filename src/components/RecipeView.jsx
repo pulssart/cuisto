@@ -11,7 +11,6 @@ import {
 import { saveRecipe } from '../services/storage';
 import { generateChefAudio } from '../services/openai';
 import ShoppingListModal from './ShoppingListModal';
-import html2pdf from 'html2pdf.js';
 import './RecipeView.css';
 
 export default function RecipeView({ recipe, onBack, onSaved }) {
@@ -22,7 +21,6 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [isSharing, setIsSharing] = useState(false);
   
   // États pour l'audio du chef
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -30,7 +28,6 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [audioError, setAudioError] = useState(null);
   const audioRef = useRef(null);
   const audioUrlRef = useRef(null);
-  const recipeContentRef = useRef(null);
 
   // Utilise l'image HD si disponible, sinon le thumbnail (pour recettes sauvegardées)
   const displayImage = recipe.image || recipe.thumbnail;
@@ -149,160 +146,6 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
 
   const handlePrint = () => {
     window.print();
-  };
-
-  // Génération du PDF et partage
-  const handleShare = async () => {
-    if (isSharing) return;
-    
-    setIsSharing(true);
-    
-    try {
-      // Attendre un peu pour s'assurer que le DOM est prêt
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Sélectionner le contenu à convertir
-      const element = recipeContentRef.current || document.querySelector('.recipe-content');
-      if (!element) {
-        throw new Error('Contenu de la recette introuvable');
-      }
-
-      // Masquer temporairement les éléments no-print
-      const noPrintElements = element.querySelectorAll('.no-print');
-      const originalDisplay = [];
-      noPrintElements.forEach((el, index) => {
-        originalDisplay[index] = el.style.display;
-        el.style.display = 'none';
-      });
-
-      // Appliquer temporairement le scale de 78%
-      const originalTransform = element.style.transform;
-      const originalWidth = element.style.width;
-      const originalTransformOrigin = element.style.transformOrigin;
-      element.style.transform = 'scale(0.78)';
-      element.style.transformOrigin = 'top left';
-      element.style.width = '128.2%';
-
-      // Attendre que les images soient chargées
-      const images = element.querySelectorAll('img');
-      const imagePromises = Array.from(images).map(img => {
-        return new Promise((resolve) => {
-          if (img.complete && img.naturalWidth > 0) {
-            resolve();
-            return;
-          }
-          const timeout = setTimeout(() => resolve(), 5000);
-          img.onload = () => {
-            clearTimeout(timeout);
-            resolve();
-          };
-          img.onerror = () => {
-            clearTimeout(timeout);
-            resolve();
-          };
-        });
-      });
-      await Promise.all(imagePromises);
-      await new Promise(resolve => setTimeout(resolve, 300));
-
-      // Options pour html2pdf.js
-      const opt = {
-        margin: [15, 12],
-        filename: `${recipe.title.replace(/[^a-z0-9]/gi, '_')}.pdf`,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { 
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: '#ffffff',
-          allowTaint: true,
-          letterRendering: true,
-        },
-        jsPDF: { 
-          unit: 'mm', 
-          format: 'a4', 
-          orientation: 'portrait',
-          compress: true,
-        },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      };
-
-      // Générer le PDF directement depuis l'élément
-      const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
-
-      // Restaurer les styles et éléments
-      element.style.transform = originalTransform;
-      element.style.width = originalWidth;
-      element.style.transformOrigin = originalTransformOrigin;
-      noPrintElements.forEach((el, index) => {
-        el.style.display = originalDisplay[index] || '';
-      });
-
-      // Restaurer les éléments no-print
-      noPrintElements.forEach((el, index) => {
-        el.style.display = originalDisplay[index] || '';
-      });
-
-      const fileName = `${recipe.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
-      const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-      // Utiliser l'API Web Share si disponible (iOS/Android)
-      if (navigator.share) {
-        try {
-          // Vérifier si on peut partager des fichiers
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: recipe.title,
-              text: `Découvrez cette recette : ${recipe.title}`,
-              files: [file],
-            });
-          } else {
-            // Essayer de partager sans fichier (certains navigateurs)
-            await navigator.share({
-              title: recipe.title,
-              text: `Découvrez cette recette : ${recipe.title}`,
-            });
-            // Télécharger le PDF en parallèle
-            const url = URL.createObjectURL(pdfBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-          }
-        } catch (shareError) {
-          // Si l'utilisateur annule le partage ou erreur, télécharger le PDF
-          if (shareError.name !== 'AbortError') {
-            console.error('Erreur partage:', shareError);
-          }
-          const url = URL.createObjectURL(pdfBlob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = fileName;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-        }
-      } else {
-        // Fallback : télécharger le PDF
-        const url = URL.createObjectURL(pdfBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }
-    } catch (error) {
-      console.error('Erreur lors du partage:', error);
-      alert(error.message || 'Erreur lors de la génération du PDF');
-    } finally {
-      setIsSharing(false);
-    }
   };
 
   const openImageFullscreen = () => {
@@ -472,20 +315,6 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
             🖨️ Imprimer
           </button>
           <button 
-            className="btn-secondary share-btn"
-            onClick={handleShare}
-            disabled={isSharing}
-            aria-label="Partager la recette"
-          >
-            {isSharing ? (
-              <>
-                <span className="btn-spinner"></span> Génération...
-              </>
-            ) : (
-              <>📤 Partager</>
-            )}
-          </button>
-          <button 
             className={`btn-icon save-btn ${isSaved ? 'saved' : ''}`}
             onClick={handleSave}
             disabled={isSaved || saving}
@@ -497,7 +326,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       </header>
 
       {/* Contenu scrollable */}
-      <div className="recipe-content" ref={recipeContentRef}>
+      <div className="recipe-content">
         {/* Badge catégorie */}
         <div className="category-badge" style={{ backgroundColor: categoryColor }}>
           {recipe.category || 'PLATS'}

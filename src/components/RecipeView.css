@@ -26,15 +26,9 @@
   align-items: center;
 }
 
-.print-btn,
-.share-btn {
+.print-btn {
   font-size: 0.85rem;
   padding: var(--spacing-sm) var(--spacing-md);
-}
-
-.share-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
 }
 
 .save-btn.saved {
@@ -684,15 +678,12 @@
     background: #ffffff !important;
   }
   
-  /* Réduire la taille d'impression à 78% */
   .recipe-view {
     min-height: auto;
     background: #ffffff !important;
     padding: 0;
     margin: 0;
-    transform: scale(0.78);
-    transform-origin: top left;
-    width: 128.2%; /* 100% / 0.78 pour compenser le scale */
+    width: 100%;
     display: block;
   }
   
