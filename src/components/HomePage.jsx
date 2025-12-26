@@ -130,9 +130,9 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
           const variationX = (Math.random() - 0.5) * maxVariationX;
           const variationY = (Math.random() - 0.5) * maxVariationY;
           
-          // Calculer la position finale
-          const x = Math.max(2, Math.min(88, baseX + variationX));
-          const y = Math.max(2, Math.min(88, baseY + variationY));
+          // Calculer la position finale (permettre de dépasser)
+          const x = Math.max(-10, Math.min(100, baseX + variationX));
+          const y = Math.max(-10, Math.min(100, baseY + variationY));
           
           return {
             image: recipe.thumbnail,
