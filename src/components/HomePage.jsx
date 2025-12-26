@@ -104,35 +104,50 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
       try {
         const recipes = await getSavedRecipesAsync();
         // Filtrer les recettes qui ont une image (thumbnail)
-        const filteredRecipes = recipes.filter(recipe => recipe.thumbnail).slice(0, 20);
+        const filteredRecipes = recipes.filter(recipe => recipe.thumbnail).slice(0, 30);
         
-        // Calculer les dimensions d'un polaroïd en pourcentage
-        // Polaroid: 200px × 250px, on suppose une largeur d'écran de 1920px
-        const polaroidWidthPercent = (200 / 1920) * 100; // ~10.4%
-        const polaroidHeightPercent = (250 / 1080) * 100; // ~23.1%
-        
-        // Créer une grille pour mieux répartir
-        const cols = Math.ceil(Math.sqrt(filteredRecipes.length * 1.5)); // Plus de colonnes que de lignes
-        const rows = Math.ceil(filteredRecipes.length / cols);
+        // Zone de bord (en pourcentage de la largeur/hauteur de l'écran)
+        const edgeZone = 15; // 15% depuis les bords
         
         const imagesWithTitles = filteredRecipes.map((recipe, index) => {
-          const col = index % cols;
-          const row = Math.floor(index / cols);
+          // Répartir sur les 4 bords : haut, droite, bas, gauche
+          const edgeIndex = index % 4;
+          const positionOnEdge = Math.floor(index / 4);
+          const totalOnEdge = Math.ceil(filteredRecipes.length / 4);
+          const progress = totalOnEdge > 1 ? positionOnEdge / (totalOnEdge - 1) : 0.5;
           
-          // Position de base dans la grille
-          const baseX = (col / cols) * 100;
-          const baseY = (row / rows) * 100;
+          let x, y, rotation;
           
-          // Ajouter une variation aléatoire mais limitée pour éviter les chevauchements
-          const maxVariationX = Math.min(15, (100 / cols) - polaroidWidthPercent - 2);
-          const maxVariationY = Math.min(15, (100 / rows) - polaroidHeightPercent - 2);
-          
-          const variationX = (Math.random() - 0.5) * maxVariationX;
-          const variationY = (Math.random() - 0.5) * maxVariationY;
-          
-          // Calculer la position finale (permettre de dépasser)
-          const x = Math.max(-10, Math.min(100, baseX + variationX));
-          const y = Math.max(-10, Math.min(100, baseY + variationY));
+          switch (edgeIndex) {
+            case 0: // Bord haut
+              x = 10 + (progress * 80); // De 10% à 90%
+              y = -5 + (Math.random() * edgeZone); // Entre -5% et edgeZone%
+              rotation = (Math.random() * 20 - 10); // Entre -10° et +10°
+              break;
+              
+            case 1: // Bord droite
+              x = 100 - edgeZone + (Math.random() * edgeZone); // Entre 100-edgeZone% et 100%
+              y = 10 + (progress * 80); // De 10% à 90%
+              rotation = 90 + (Math.random() * 20 - 10); // Rotation verticale avec variation
+              break;
+              
+            case 2: // Bord bas
+              x = 10 + (progress * 80); // De 10% à 90%
+              y = 100 - edgeZone + (Math.random() * edgeZone); // Entre 100-edgeZone% et 100%
+              rotation = 180 + (Math.random() * 20 - 10); // Rotation inversée avec variation
+              break;
+              
+            case 3: // Bord gauche
+              x = -5 + (Math.random() * edgeZone); // Entre -5% et edgeZone%
+              y = 10 + (progress * 80); // De 10% à 90%
+              rotation = 270 + (Math.random() * 20 - 10); // Rotation verticale inversée avec variation
+              break;
+              
+            default:
+              x = 50;
+              y = 50;
+              rotation = 0;
+          }
           
           return {
             image: recipe.thumbnail,
@@ -140,7 +155,7 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
             id: recipe.id,
             x: x,
             y: y,
-            rotation: (Math.random() * 20 - 10) // Entre -10° et +10°
+            rotation: rotation
           };
         });
         setPolaroidImages(imagesWithTitles);
