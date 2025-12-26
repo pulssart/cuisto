@@ -11,8 +11,7 @@ import {
 import { saveRecipe } from '../services/storage';
 import { generateChefAudio } from '../services/openai';
 import ShoppingListModal from './ShoppingListModal';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import html2pdf from 'html2pdf.js';
 import './RecipeView.css';
 
 export default function RecipeView({ recipe, onBack, onSaved }) {
@@ -182,68 +181,68 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       tempContainer.style.background = '#ffffff';
       tempContainer.style.padding = '0';
       tempContainer.style.margin = '0';
+      tempContainer.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+      tempContainer.id = 'pdf-temp-container';
       
-      // Créer un wrapper pour appliquer le scale
-      const scaleWrapper = document.createElement('div');
-      scaleWrapper.style.transform = 'scale(0.78)';
-      scaleWrapper.style.transformOrigin = 'top left';
-      scaleWrapper.style.width = '128.2%';
-      scaleWrapper.appendChild(clone);
-      tempContainer.appendChild(scaleWrapper);
+      // Appliquer le scale de 78% directement au clone
+      clone.style.transform = 'scale(0.78)';
+      clone.style.transformOrigin = 'top left';
+      clone.style.width = '128.2%';
+      clone.style.background = '#ffffff';
+      clone.style.maxWidth = 'none';
       
+      tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
       // Attendre que le layout soit calculé et que les images soient chargées
       const images = clone.querySelectorAll('img');
       const imagePromises = Array.from(images).map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = resolve; // Continuer même si une image échoue
-          setTimeout(resolve, 3000); // Timeout après 3s
+        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+        return new Promise((resolve) => {
+          const timeout = setTimeout(() => resolve(), 5000); // Timeout après 5s
+          img.onload = () => {
+            clearTimeout(timeout);
+            resolve();
+          };
+          img.onerror = () => {
+            clearTimeout(timeout);
+            resolve(); // Continuer même si une image échoue
+          };
         });
       });
       await Promise.all(imagePromises);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Convertir en canvas puis en PDF
-      const canvas = await html2canvas(tempContainer, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: tempContainer.scrollWidth,
-        height: tempContainer.scrollHeight,
-        allowTaint: true,
-      });
+      // Options pour html2pdf.js - optimisées pour qualité et compatibilité
+      const opt = {
+        margin: [15, 12], // Marges en mm (top/bottom, left/right)
+        filename: `${recipe.title.replace(/[^a-z0-9]/gi, '_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { 
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          allowTaint: true, // Permettre les images base64
+          letterRendering: true,
+          width: tempContainer.scrollWidth,
+          height: tempContainer.scrollHeight,
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait',
+          compress: true,
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+      };
+
+      // Générer le PDF avec html2pdf.js
+      const pdfBlob = await html2pdf().set(opt).from(tempContainer).outputPdf('blob');
 
       // Nettoyer le conteneur temporaire
       document.body.removeChild(tempContainer);
 
-      // Créer le PDF
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const scaledWidth = imgWidth * ratio;
-      const scaledHeight = imgHeight * ratio;
-      
-      // Calculer le nombre de pages nécessaires
-      const totalPages = Math.ceil(scaledHeight / pdfHeight);
-      
-      for (let i = 0; i < totalPages; i++) {
-        if (i > 0) {
-          pdf.addPage();
-        }
-        const yPosition = -i * pdfHeight;
-        pdf.addImage(imgData, 'PNG', 0, yPosition, scaledWidth, scaledHeight);
-      }
-
-      // Générer le blob du PDF
-      const pdfBlob = pdf.output('blob');
       const fileName = `${recipe.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
