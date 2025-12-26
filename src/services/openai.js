@@ -426,14 +426,25 @@ export async function generateRandomRecipeIdea() {
 
   const systemPrompt = `Tu es un chef cuisinier créatif. Génère une idée de recette originale et appétissante en une seule phrase.
 L'idée doit être inspirante, avec des ingrédients intéressants et une description qui donne envie.
-Exemples de format:
-- "Un plat réconfortant avec des champignons et du fromage"
-- "Un dessert au chocolat avec une touche de fruits rouges"
-- "Une recette végétarienne aux saveurs méditerranéennes"
+
+IMPORTANT - Diversité requise:
+- Évite absolument les recettes trop courantes comme curry, tacos, burgers, pizza, pâtes classiques
+- Varie entre entrées, plats principaux et desserts
+- Explore différentes cuisines (française, italienne, asiatique, méditerranéenne, fusion, etc.)
+- Propose des combinaisons originales d'ingrédients
+- Varie les techniques culinaires (braisé, mijoté, grillé, cru, fermenté, etc.)
+
+Exemples de format variés:
+- "Une entrée de carpaccio de betterave avec fromage de chèvre et noix"
+- "Un plat de canard confit aux cerises et purée de patate douce"
+- "Un dessert de tarte tatin revisitée aux poires et épices"
+- "Une salade composée aux légumes rôtis et vinaigrette au miel"
+- "Un plat de poisson en croûte de sel avec légumes vapeur"
+- "Un dessert de mousse au citron vert et basilic"
 
 Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`;
 
-  const userPrompt = `Génère une idée de recette aléatoire, créative et appétissante.`;
+  const userPrompt = `Génère une idée de recette aléatoire, créative et appétissante. Varie les catégories (entrée/plat/dessert), les cuisines et les techniques. Évite les recettes trop populaires comme curry ou tacos.`;
 
   try {
     const response = await fetch(`${API_URL}/chat/completions`, {
@@ -448,8 +459,8 @@ Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 1.2, // Température élevée pour plus de créativité
-        max_tokens: 50, // Limiter les tokens pour réduire les coûts
+        temperature: 1.4, // Température très élevée pour plus de créativité et diversité
+        max_tokens: 60, // Un peu plus de tokens pour des descriptions plus variées
       }),
     });
 
