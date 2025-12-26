@@ -479,4 +479,94 @@ Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`;
   }
 }
 
+/**
+ * Chat avec le chef sur une recette spécifique
+ * @param {Object} recipe - La recette complète
+ * @param {Array} messages - Historique des messages de conversation
+ * @returns {Promise<string>} La réponse du chef
+ */
+export async function chatWithChef(recipe, messages) {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    throw new Error('Clé API OpenAI non configurée. Veuillez la configurer dans les paramètres.');
+  }
+
+  // Construire le contexte de la recette
+  const recipeContext = `
+RECETTE: ${recipe.title}
+Catégorie: ${recipe.category || 'PLATS'}
+Portions: ${recipe.servings}
+Temps de préparation: ${recipe.prepTime}
+Temps de cuisson: ${recipe.cookTime || '0 min'}
+Temps de repos: ${recipe.restTime || '0 min'}
+
+INGRÉDIENTS:
+${recipe.ingredients?.map(section => {
+  let text = section.section ? `${section.section}:\n` : '';
+  text += section.items?.map(item => `- ${item}`).join('\n') || '';
+  return text;
+}).join('\n\n') || 'Aucun ingrédient'}
+
+INSTRUCTIONS:
+${recipe.instructions?.map((step, index) => {
+  const stepText = typeof step === 'string' ? step : step.text;
+  return `${index + 1}. ${stepText}`;
+}).join('\n\n') || 'Aucune instruction'}
+
+${recipe.chefComment ? `COMMENTAIRE DU CHEF: ${recipe.chefComment}` : ''}
+`.trim();
+
+  const systemPrompt = `Tu es un chef cuisinier expert et passionné. Tu discutes avec un utilisateur à propos de cette recette précise.
+
+CONTEXTE DE LA RECETTE:
+${recipeContext}
+
+Tu dois:
+- Répondre de manière chaleureuse et professionnelle, comme un vrai chef
+- T'aider du contexte de la recette pour répondre aux questions
+- Donner des conseils pratiques, des astuces, des alternatives d'ingrédients
+- Expliquer les techniques culinaires si nécessaire
+- Être concis mais complet dans tes réponses
+- Utiliser "tu" pour être proche et accessible
+
+Réponds uniquement en français.`;
+
+  // Construire les messages pour l'API
+  const apiMessages = [
+    { role: 'system', content: systemPrompt },
+    ...messages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }))
+  ];
+
+  try {
+    const response = await fetch(`${API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // Modèle économique pour le chat
+        messages: apiMessages,
+        temperature: 0.7,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Erreur lors de la conversation avec le chef');
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Erreur OpenAI (chat avec le chef):', error);
+    throw error;
+  }
+}
+
 export { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS };

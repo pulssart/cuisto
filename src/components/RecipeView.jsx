@@ -11,6 +11,7 @@ import {
 import { saveRecipe } from '../services/storage';
 import { generateChefAudio } from '../services/openai';
 import ShoppingListModal from './ShoppingListModal';
+import ChefChatModal from './ChefChatModal';
 import './RecipeView.css';
 
 export default function RecipeView({ recipe, onBack, onSaved }) {
@@ -20,6 +21,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [isImageFullscreen, setIsImageFullscreen] = useState(false);
   const [selectedStepIllustration, setSelectedStepIllustration] = useState(null);
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
+  const [isChefChatOpen, setIsChefChatOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   
   // États pour l'audio du chef
@@ -291,6 +293,13 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
           <ArrowLeftIcon size={22} />
         </button>
         <div className="header-actions">
+          <button 
+            className="btn-secondary chef-chat-btn"
+            onClick={() => setIsChefChatOpen(true)}
+            aria-label="Discuter avec le chef"
+          >
+            💬 Discuter avec le Chef
+          </button>
           {recipe.chefComment && (
             <button 
               className={`btn-secondary chef-btn ${isPlayingAudio ? 'playing' : ''}`}
@@ -467,6 +476,13 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       <ShoppingListModal
         isOpen={isShoppingListOpen}
         onClose={() => setIsShoppingListOpen(false)}
+        recipe={recipe}
+      />
+
+      {/* Modale chat avec le chef */}
+      <ChefChatModal
+        isOpen={isChefChatOpen}
+        onClose={() => setIsChefChatOpen(false)}
         recipe={recipe}
       />
     </div>
