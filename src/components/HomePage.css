@@ -132,6 +132,7 @@
 .prompt-header .form-label {
   margin-bottom: 0;
   flex: 1;
+  text-align: left;
 }
 
 .btn-random {
@@ -332,7 +333,7 @@
   }
 
   .prompt-header .form-label {
-    text-align: center;
+    text-align: left;
   }
 
   .btn-random {
