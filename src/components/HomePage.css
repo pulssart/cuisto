@@ -34,13 +34,13 @@
   left: var(--x);
   top: var(--y);
   transform: rotate(var(--rotation));
-  opacity: 0.5;
+  opacity: 0.25;
   animation: polaroidFadeIn 0.8s ease-out var(--delay) forwards;
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .polaroid-item:hover {
-  opacity: 0.7;
+  opacity: 0.4;
   transform: rotate(var(--rotation)) scale(1.05);
 }
 
@@ -50,7 +50,7 @@
     transform: rotate(var(--rotation)) scale(0.8);
   }
   to {
-    opacity: 0.5;
+    opacity: 0.25;
     transform: rotate(var(--rotation)) scale(1);
   }
 }
