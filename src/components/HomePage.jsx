@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ChefHatIcon, SettingsIcon, BookmarkIcon } from './icons';
 import { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS, generateRandomRecipeIdea } from '../services/openai';
 import { hasApiKey, getRecipesCount } from '../services/storage';
@@ -12,8 +12,81 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
   const [typeIndex, setTypeIndex] = useState(0); // Salé
   const [savedRecipesCount, setSavedRecipesCount] = useState(0);
   const [isLoadingRandom, setIsLoadingRandom] = useState(false);
+  const [randomLimitInfo, setRandomLimitInfo] = useState(null);
 
   const apiConfigured = hasApiKey();
+
+  // Constantes pour la limitation
+  const RANDOM_LIMIT_KEY = 'cuisto_random_limit';
+  const RANDOM_BLOCK_START_KEY = 'cuisto_random_block_start';
+  const MAX_REQUESTS = 30;
+  const BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
+  // Fonction pour vérifier et mettre à jour le compteur
+  const checkRandomLimit = useCallback(() => {
+    const now = Date.now();
+    const blockStart = parseInt(localStorage.getItem(RANDOM_BLOCK_START_KEY) || '0');
+    const count = parseInt(localStorage.getItem(RANDOM_LIMIT_KEY) || '0');
+
+    // Si on est dans un bloc et que 30 minutes ne sont pas écoulées
+    if (blockStart > 0 && (now - blockStart) < BLOCK_DURATION_MS) {
+      const remainingTime = BLOCK_DURATION_MS - (now - blockStart);
+      const remainingMinutes = Math.ceil(remainingTime / 60000);
+      return {
+        blocked: true,
+        remainingMinutes,
+        count,
+      };
+    }
+
+    // Si 30 minutes se sont écoulées, réinitialiser
+    if (blockStart > 0 && (now - blockStart) >= BLOCK_DURATION_MS) {
+      localStorage.removeItem(RANDOM_LIMIT_KEY);
+      localStorage.removeItem(RANDOM_BLOCK_START_KEY);
+      return { blocked: false, count: 0 };
+    }
+
+    // Si on atteint la limite, démarrer le bloc
+    if (count >= MAX_REQUESTS) {
+      if (blockStart === 0) {
+        localStorage.setItem(RANDOM_BLOCK_START_KEY, now.toString());
+      }
+      const remainingTime = BLOCK_DURATION_MS;
+      const remainingMinutes = Math.ceil(remainingTime / 60000);
+      return {
+        blocked: true,
+        remainingMinutes,
+        count,
+      };
+    }
+
+    return { blocked: false, count };
+  }, []);
+
+  // Fonction pour incrémenter le compteur
+  const incrementRandomCount = useCallback(() => {
+    const count = parseInt(localStorage.getItem(RANDOM_LIMIT_KEY) || '0');
+    const newCount = count + 1;
+    localStorage.setItem(RANDOM_LIMIT_KEY, newCount.toString());
+    
+    // Si on atteint la limite, démarrer le bloc
+    if (newCount >= MAX_REQUESTS) {
+      localStorage.setItem(RANDOM_BLOCK_START_KEY, Date.now().toString());
+    }
+  }, []);
+
+  // Vérifier la limite au montage et périodiquement
+  useEffect(() => {
+    const checkLimit = () => {
+      const limitInfo = checkRandomLimit();
+      setRandomLimitInfo(limitInfo);
+    };
+
+    checkLimit();
+    const interval = setInterval(checkLimit, 60000); // Vérifier toutes les minutes
+
+    return () => clearInterval(interval);
+  }, [checkRandomLimit]);
 
   // Charger le nombre de recettes au montage
   useEffect(() => {
@@ -40,10 +113,22 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
   const handleRandomIdea = async () => {
     if (!apiConfigured || isGenerating || isLoadingRandom) return;
     
+    // Vérifier la limite avant de faire la requête
+    const limitInfo = checkRandomLimit();
+    if (limitInfo.blocked) {
+      setRandomLimitInfo(limitInfo);
+      return;
+    }
+    
     setIsLoadingRandom(true);
     try {
       const idea = await generateRandomRecipeIdea();
       setPrompt(idea);
+      incrementRandomCount();
+      
+      // Vérifier à nouveau après l'incrémentation
+      const newLimitInfo = checkRandomLimit();
+      setRandomLimitInfo(newLimitInfo);
     } catch (error) {
       console.error('Erreur génération idée aléatoire:', error);
       alert(error.message || 'Erreur lors de la génération d\'une idée aléatoire');
@@ -99,7 +184,7 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
               type="button"
               className="btn-random"
               onClick={handleRandomIdea}
-              disabled={!apiConfigured || isGenerating || isLoadingRandom}
+              disabled={!apiConfigured || isGenerating || isLoadingRandom || (randomLimitInfo?.blocked)}
               aria-label="Générer une idée aléatoire"
             >
               {isLoadingRandom ? (
@@ -119,6 +204,15 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
             rows={3}
             disabled={isGenerating}
           />
+          {randomLimitInfo?.blocked && (
+            <div className="random-limit-message">
+              <span className="limit-icon">⏱</span>
+              <span className="limit-text">
+                Limite atteinte ({randomLimitInfo.count}/{MAX_REQUESTS} requêtes). 
+                Réessayez dans {randomLimitInfo.remainingMinutes} minute{randomLimitInfo.remainingMinutes > 1 ? 's' : ''}.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Sliders */}
