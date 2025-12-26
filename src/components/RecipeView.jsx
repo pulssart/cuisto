@@ -159,63 +159,55 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     
     try {
       // Attendre un peu pour s'assurer que le DOM est prêt
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Sélectionner le contenu à convertir (tout sauf le header)
+      // Sélectionner le contenu à convertir
       const element = recipeContentRef.current || document.querySelector('.recipe-content');
       if (!element) {
         throw new Error('Contenu de la recette introuvable');
       }
 
-      // Créer un clone pour l'impression (sans les éléments no-print)
-      const clone = element.cloneNode(true);
-      const noPrintElements = clone.querySelectorAll('.no-print');
-      noPrintElements.forEach(el => el.remove());
-      
-      // Créer un conteneur temporaire pour le clone avec les styles d'impression
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '210mm'; // Largeur A4
-      tempContainer.style.background = '#ffffff';
-      tempContainer.style.padding = '0';
-      tempContainer.style.margin = '0';
-      tempContainer.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-      tempContainer.id = 'pdf-temp-container';
-      
-      // Appliquer le scale de 78% directement au clone
-      clone.style.transform = 'scale(0.78)';
-      clone.style.transformOrigin = 'top left';
-      clone.style.width = '128.2%';
-      clone.style.background = '#ffffff';
-      clone.style.maxWidth = 'none';
-      
-      tempContainer.appendChild(clone);
-      document.body.appendChild(tempContainer);
+      // Masquer temporairement les éléments no-print
+      const noPrintElements = element.querySelectorAll('.no-print');
+      const originalDisplay = [];
+      noPrintElements.forEach((el, index) => {
+        originalDisplay[index] = el.style.display;
+        el.style.display = 'none';
+      });
 
-      // Attendre que le layout soit calculé et que les images soient chargées
-      const images = clone.querySelectorAll('img');
+      // Appliquer temporairement le scale de 78%
+      const originalTransform = element.style.transform;
+      const originalWidth = element.style.width;
+      const originalTransformOrigin = element.style.transformOrigin;
+      element.style.transform = 'scale(0.78)';
+      element.style.transformOrigin = 'top left';
+      element.style.width = '128.2%';
+
+      // Attendre que les images soient chargées
+      const images = element.querySelectorAll('img');
       const imagePromises = Array.from(images).map(img => {
-        if (img.complete && img.naturalWidth > 0) return Promise.resolve();
         return new Promise((resolve) => {
-          const timeout = setTimeout(() => resolve(), 5000); // Timeout après 5s
+          if (img.complete && img.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+          const timeout = setTimeout(() => resolve(), 5000);
           img.onload = () => {
             clearTimeout(timeout);
             resolve();
           };
           img.onerror = () => {
             clearTimeout(timeout);
-            resolve(); // Continuer même si une image échoue
+            resolve();
           };
         });
       });
       await Promise.all(imagePromises);
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // Options pour html2pdf.js - optimisées pour qualité et compatibilité
+      // Options pour html2pdf.js
       const opt = {
-        margin: [15, 12], // Marges en mm (top/bottom, left/right)
+        margin: [15, 12],
         filename: `${recipe.title.replace(/[^a-z0-9]/gi, '_')}.pdf`,
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { 
@@ -223,10 +215,8 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          allowTaint: true, // Permettre les images base64
+          allowTaint: true,
           letterRendering: true,
-          width: tempContainer.scrollWidth,
-          height: tempContainer.scrollHeight,
         },
         jsPDF: { 
           unit: 'mm', 
@@ -237,11 +227,21 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
       };
 
-      // Générer le PDF avec html2pdf.js
-      const pdfBlob = await html2pdf().set(opt).from(tempContainer).outputPdf('blob');
+      // Générer le PDF directement depuis l'élément
+      const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
 
-      // Nettoyer le conteneur temporaire
-      document.body.removeChild(tempContainer);
+      // Restaurer les styles et éléments
+      element.style.transform = originalTransform;
+      element.style.width = originalWidth;
+      element.style.transformOrigin = originalTransformOrigin;
+      noPrintElements.forEach((el, index) => {
+        el.style.display = originalDisplay[index] || '';
+      });
+
+      // Restaurer les éléments no-print
+      noPrintElements.forEach((el, index) => {
+        el.style.display = originalDisplay[index] || '';
+      });
 
       const fileName = `${recipe.title.replace(/[^a-z0-9]/gi, '_')}.pdf`;
       const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
