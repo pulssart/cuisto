@@ -3,13 +3,101 @@ import { CloseIcon } from './icons';
 import { chatWithChef } from '../services/openai';
 import './ChefChatModal.css';
 
+// Fonction pour formater le markdown (gras, italique, etc.)
+function formatMessage(text) {
+  if (!text) return '';
+  
+  // Convertir le markdown en éléments React
+  const parts = [];
+  let currentIndex = 0;
+  
+  // Regex pour **gras** et *italique*
+  const boldRegex = /\*\*(.+?)\*\*/g;
+  const italicRegex = /\*(.+?)\*/g;
+  
+  // Trouver tous les matches
+  const matches = [];
+  let match;
+  
+  // Gras
+  while ((match = boldRegex.exec(text)) !== null) {
+    matches.push({
+      type: 'bold',
+      start: match.index,
+      end: match.index + match[0].length,
+      content: match[1]
+    });
+  }
+  
+  // Italique (seulement si pas déjà dans un gras)
+  while ((match = italicRegex.exec(text)) !== null) {
+    const isInBold = matches.some(m => 
+      m.type === 'bold' && 
+      match.index >= m.start && 
+      match.index < m.end
+    );
+    if (!isInBold) {
+      matches.push({
+        type: 'italic',
+        start: match.index,
+        end: match.index + match[0].length,
+        content: match[1]
+      });
+    }
+  }
+  
+  // Trier par position
+  matches.sort((a, b) => a.start - b.start);
+  
+  // Si pas de matches, retourner le texte tel quel
+  if (matches.length === 0) {
+    return text;
+  }
+  
+  // Construire les éléments
+  let lastIndex = 0;
+  matches.forEach((match, idx) => {
+    // Texte avant le match
+    if (match.start > lastIndex) {
+      parts.push(text.substring(lastIndex, match.start));
+    }
+    
+    // Le match formaté
+    if (match.type === 'bold') {
+      parts.push(<strong key={`bold-${idx}`}>{match.content}</strong>);
+    } else if (match.type === 'italic') {
+      parts.push(<em key={`italic-${idx}`}>{match.content}</em>);
+    }
+    
+    lastIndex = match.end;
+  });
+  
+  // Texte restant
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+  
+  return parts;
+}
+
+// Fonction pour découper un texte en chunks pour le streaming
+function chunkText(text, chunkSize = 3) {
+  const chunks = [];
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.substring(i, i + chunkSize));
+  }
+  return chunks;
+}
+
 export default function ChefChatModal({ isOpen, onClose, recipe }) {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [streamingMessage, setStreamingMessage] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const streamingTimeoutRef = useRef(null);
 
   // Réinitialiser les messages quand la modale s'ouvre
   useEffect(() => {
@@ -35,7 +123,67 @@ export default function ChefChatModal({ isOpen, onClose, recipe }) {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [messages, streamingMessage]);
+
+  // Cleanup du streaming à la fermeture
+  useEffect(() => {
+    return () => {
+      if (streamingTimeoutRef.current) {
+        clearTimeout(streamingTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Fonction pour streamer un message progressivement
+  const streamMessage = (fullText) => {
+    setStreamingMessage('');
+    
+    // Ajuster la taille des chunks selon la longueur du message
+    const chunkSize = fullText.length > 200 ? 3 : 2;
+    const chunks = chunkText(fullText, chunkSize);
+    let currentIndex = 0;
+
+    const streamNext = () => {
+      if (currentIndex < chunks.length) {
+        setStreamingMessage(prev => prev + chunks[currentIndex]);
+        currentIndex++;
+        
+        // Vitesse variable : plus rapide pour les espaces et ponctuation, plus lent pour le texte
+        const chunk = chunks[currentIndex - 1];
+        let delay = 25; // Délai par défaut
+        
+        if (chunk.match(/^\s+$/)) {
+          // Espaces uniquement : très rapide
+          delay = 10;
+        } else if (chunk.match(/[.,!?;:]/)) {
+          // Ponctuation : pause plus longue
+          delay = 50;
+        } else if (chunk.match(/\s/)) {
+          // Contient des espaces : rapide
+          delay = 20;
+        } else {
+          // Texte normal : vitesse normale
+          delay = 30;
+        }
+        
+        streamingTimeoutRef.current = setTimeout(streamNext, delay);
+      } else {
+        // Streaming terminé, ajouter le message complet à l'historique
+        setMessages(prev => [...prev, { role: 'assistant', content: fullText }]);
+        setStreamingMessage('');
+        setIsLoading(false);
+        
+        // Re-focus sur l'input
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }, 100);
+      }
+    };
+
+    streamNext();
+  };
 
   const handleSend = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -48,17 +196,19 @@ export default function ChefChatModal({ isOpen, onClose, recipe }) {
     const newMessages = [...messages, { role: 'user', content: userMessage }];
     setMessages(newMessages);
     setIsLoading(true);
+    setStreamingMessage('');
 
     try {
       const response = await chatWithChef(recipe, newMessages);
-      setMessages([...newMessages, { role: 'assistant', content: response }]);
+      // Streamer la réponse progressivement
+      streamMessage(response);
     } catch (err) {
       console.error('Erreur chat:', err);
       setError(err.message || 'Erreur lors de la conversation avec le chef');
       // Retirer le message utilisateur en cas d'erreur pour permettre de réessayer
       setMessages(messages);
-    } finally {
       setIsLoading(false);
+      setStreamingMessage('');
       // Re-focus sur l'input
       setTimeout(() => {
         if (inputRef.current) {
@@ -95,11 +245,19 @@ export default function ChefChatModal({ isOpen, onClose, recipe }) {
                 className={`chef-chat-message ${message.role === 'user' ? 'user-message' : 'chef-message'}`}
               >
                 <div className="message-content">
-                  {message.content}
+                  {formatMessage(message.content)}
                 </div>
               </div>
             ))}
-            {isLoading && (
+            {streamingMessage && (
+              <div className="chef-chat-message chef-message">
+                <div className="message-content">
+                  {formatMessage(streamingMessage)}
+                  <span className="streaming-cursor">|</span>
+                </div>
+              </div>
+            )}
+            {isLoading && !streamingMessage && (
               <div className="chef-chat-message chef-message">
                 <div className="message-content">
                   <span className="typing-indicator">
