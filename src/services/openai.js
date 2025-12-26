@@ -412,4 +412,60 @@ export function extractShoppingList(recipe) {
   return Array.from(ingredientsMap.values());
 }
 
+/**
+ * Génère des idées de recette aléatoires
+ * Utilise gpt-4o-mini (le modèle le moins cher) pour réduire les coûts
+ * @returns {Promise<string>} Une idée de recette
+ */
+export async function generateRandomRecipeIdea() {
+  const apiKey = getApiKey();
+  
+  if (!apiKey) {
+    throw new Error('Clé API OpenAI non configurée');
+  }
+
+  const systemPrompt = `Tu es un chef cuisinier créatif. Génère une idée de recette originale et appétissante en une seule phrase.
+L'idée doit être inspirante, avec des ingrédients intéressants et une description qui donne envie.
+Exemples de format:
+- "Un plat réconfortant avec des champignons et du fromage"
+- "Un dessert au chocolat avec une touche de fruits rouges"
+- "Une recette végétarienne aux saveurs méditerranéennes"
+
+Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`;
+
+  const userPrompt = `Génère une idée de recette aléatoire, créative et appétissante.`;
+
+  try {
+    const response = await fetch(`${API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini', // Modèle le moins cher
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 1.2, // Température élevée pour plus de créativité
+        max_tokens: 50, // Limiter les tokens pour réduire les coûts
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Erreur lors de la génération d\'idée');
+    }
+
+    const data = await response.json();
+    const idea = data.choices[0].message.content.trim();
+    
+    return idea;
+  } catch (error) {
+    console.error('Erreur OpenAI (idée aléatoire):', error);
+    throw error;
+  }
+}
+
 export { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS };

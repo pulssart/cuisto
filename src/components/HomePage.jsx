@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ChefHatIcon, SettingsIcon, BookmarkIcon } from './icons';
-import { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS } from '../services/openai';
+import { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS, generateRandomRecipeIdea } from '../services/openai';
 import { hasApiKey, getRecipesCount } from '../services/storage';
 import './HomePage.css';
 
@@ -11,6 +11,7 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
   const [audienceIndex, setAudienceIndex] = useState(3); // Toute la famille
   const [typeIndex, setTypeIndex] = useState(0); // Salé
   const [savedRecipesCount, setSavedRecipesCount] = useState(0);
+  const [isLoadingRandom, setIsLoadingRandom] = useState(false);
 
   const apiConfigured = hasApiKey();
 
@@ -34,6 +35,21 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
       audienceIndex,
       typeIndex,
     });
+  };
+
+  const handleRandomIdea = async () => {
+    if (!apiConfigured || isGenerating || isLoadingRandom) return;
+    
+    setIsLoadingRandom(true);
+    try {
+      const idea = await generateRandomRecipeIdea();
+      setPrompt(idea);
+    } catch (error) {
+      console.error('Erreur génération idée aléatoire:', error);
+      alert(error.message || 'Erreur lors de la génération d\'une idée aléatoire');
+    } finally {
+      setIsLoadingRandom(false);
+    }
   };
 
   return (
@@ -75,9 +91,25 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
       <form className="home-form" onSubmit={handleSubmit}>
         {/* Prompt */}
         <div className="form-section prompt-section">
-          <label htmlFor="prompt" className="form-label">
-            Quelle est votre envie ?
-          </label>
+          <div className="prompt-header">
+            <label htmlFor="prompt" className="form-label">
+              Quelle est votre envie ?
+            </label>
+            <button
+              type="button"
+              className="btn-random"
+              onClick={handleRandomIdea}
+              disabled={!apiConfigured || isGenerating || isLoadingRandom}
+              aria-label="Générer une idée aléatoire"
+            >
+              {isLoadingRandom ? (
+                <span className="spinner-small"></span>
+              ) : (
+                <span>🎲</span>
+              )}
+              <span>Aléatoire</span>
+            </button>
+          </div>
           <textarea
             id="prompt"
             value={prompt}
