@@ -1,32 +1,28 @@
 import { useState, useEffect } from 'react';
 import { CloseIcon } from './icons';
-import { getApiKey, saveApiKey, removeApiKey, hasApiKey } from '../services/storage';
+import { getApiKey, saveApiKey, removeApiKey } from '../services/storage';
 import './SettingsModal.css';
 
 export default function SettingsModal({ isOpen, onClose }) {
   const [apiKey, setApiKey] = useState('');
-  const [isConfigured, setIsConfigured] = useState(false);
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       const key = getApiKey();
-      if (key) {
-        setApiKey(key);
-        setIsConfigured(true);
-      } else {
-        setApiKey('');
-        setIsConfigured(false);
-      }
-      setSaved(false);
+      const timeoutId = setTimeout(() => {
+        setApiKey(key || '');
+        setSaved(false);
+      }, 0);
+
+      return () => clearTimeout(timeoutId);
     }
   }, [isOpen]);
 
   const handleSave = () => {
     if (apiKey.trim()) {
       saveApiKey(apiKey.trim());
-      setIsConfigured(true);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
@@ -35,7 +31,6 @@ export default function SettingsModal({ isOpen, onClose }) {
   const handleRemove = () => {
     removeApiKey();
     setApiKey('');
-    setIsConfigured(false);
     setShowKey(false);
   };
 
@@ -87,7 +82,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
 
             <div className="api-key-status">
-              {isConfigured ? (
+              {apiKey ? (
                 <span className="status-configured">✓ Clé API configurée</span>
               ) : (
                 <span className="status-not-configured">⚠ Clé API non configurée</span>
@@ -102,7 +97,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               >
                 {saved ? '✓ Sauvegardé !' : 'Sauvegarder'}
               </button>
-              {isConfigured && (
+              {apiKey && (
                 <button className="btn-secondary btn-danger" onClick={handleRemove}>
                   Supprimer la clé
                 </button>

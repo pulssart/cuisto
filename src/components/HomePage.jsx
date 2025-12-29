@@ -4,6 +4,12 @@ import { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS, gener
 import { hasApiKey, getRecipesCount } from '../services/storage';
 import './HomePage.css';
 
+// Constantes pour la limitation
+const RANDOM_LIMIT_KEY = 'cuisto_random_limit';
+const RANDOM_BLOCK_START_KEY = 'cuisto_random_block_start';
+const MAX_REQUESTS = 30;
+const BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
+
 export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGenerating }) {
   const [prompt, setPrompt] = useState('');
   const [timeIndex, setTimeIndex] = useState(1); // 30 min par défaut
@@ -15,12 +21,6 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
   const [randomLimitInfo, setRandomLimitInfo] = useState(null);
 
   const apiConfigured = hasApiKey();
-
-  // Constantes pour la limitation
-  const RANDOM_LIMIT_KEY = 'cuisto_random_limit';
-  const RANDOM_BLOCK_START_KEY = 'cuisto_random_block_start';
-  const MAX_REQUESTS = 30;
-  const BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
   // Fonction pour vérifier et mettre à jour le compteur
   const checkRandomLimit = useCallback(() => {
