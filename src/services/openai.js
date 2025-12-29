@@ -437,7 +437,10 @@ IMPORTANT - Accessibilité requise:
 - Mentionne si possible une astuce pour gagner du temps ou une substitution courante
 - Limite le nombre d'ingrédients originaux
 
-Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`
+Format de réponse obligatoire:
+- Donne uniquement un nom ou une idée de recette (comme un intitulé), sans aucune instruction ni formulation à l'impératif
+- Pas d'étapes, pas de consignes, pas de verbes d'action dirigés vers l'utilisateur
+- Pas d'introduction ni d'explication, juste l'idée elle-même.`
     : `Tu es un chef cuisinier créatif. Génère une idée de recette originale et appétissante en une seule phrase.
 L'idée doit être inspirante, avec des ingrédients intéressants et une description qui donne envie.
 
@@ -456,7 +459,10 @@ Exemples de format variés:
 - "Un plat de poisson en croûte de sel avec légumes vapeur"
 - "Un dessert de mousse au citron vert et basilic"
 
-Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`;
+Format de réponse obligatoire:
+- Donne uniquement un nom ou une idée de recette (comme un intitulé), sans aucune instruction ni formulation à l'impératif
+- Pas d'étapes, pas de consignes, pas de verbes d'action dirigés vers l'utilisateur
+- Pas d'introduction ni d'explication, juste l'idée elle-même.`;
 
   const userPrompt = easyMode
     ? `Génère une idée de recette aléatoire, facile et appétissante. Vise un temps total inférieur à 45 minutes, des ingrédients disponibles en supermarché et des instructions simples.`
