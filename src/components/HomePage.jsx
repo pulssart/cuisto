@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChefHatIcon, SettingsIcon, BookmarkIcon } from './icons';
 import { TIME_OPTIONS, DIFFICULTY_OPTIONS, AUDIENCE_OPTIONS, TYPE_OPTIONS, generateRandomRecipeIdea } from '../services/openai';
-import { hasApiKey, getRecipesCount, getSavedRecipesAsync } from '../services/storage';
+import { hasApiKey, getRecipesCount } from '../services/storage';
 import './HomePage.css';
+
+// Constantes pour la limitation
+const RANDOM_LIMIT_KEY = 'cuisto_random_limit';
+const RANDOM_BLOCK_START_KEY = 'cuisto_random_block_start';
+const MAX_REQUESTS = 30;
+const BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGenerating }) {
   const [prompt, setPrompt] = useState('');
@@ -13,15 +19,8 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
   const [savedRecipesCount, setSavedRecipesCount] = useState(0);
   const [isLoadingRandom, setIsLoadingRandom] = useState(false);
   const [randomLimitInfo, setRandomLimitInfo] = useState(null);
-  const [polaroidImages, setPolaroidImages] = useState([]);
 
   const apiConfigured = hasApiKey();
-
-  // Constantes pour la limitation
-  const RANDOM_LIMIT_KEY = 'cuisto_random_limit';
-  const RANDOM_BLOCK_START_KEY = 'cuisto_random_block_start';
-  const MAX_REQUESTS = 30;
-  const BLOCK_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
   // Fonction pour vérifier et mettre à jour le compteur
   const checkRandomLimit = useCallback(() => {
@@ -98,74 +97,6 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
     loadCount();
   }, []);
 
-  // Charger les images des recettes pour le fond polaroïd
-  useEffect(() => {
-    const loadPolaroidImages = async () => {
-      try {
-        const recipes = await getSavedRecipesAsync();
-        // Filtrer les recettes qui ont une image (thumbnail)
-        const filteredRecipes = recipes.filter(recipe => recipe.thumbnail).slice(0, 30);
-        
-        // Zone de bord (en pourcentage de la largeur/hauteur de l'écran)
-        const edgeZone = 15; // 15% depuis les bords
-        
-        const imagesWithTitles = filteredRecipes.map((recipe, index) => {
-          // Répartir sur les 4 bords : haut, droite, bas, gauche
-          const edgeIndex = index % 4;
-          const positionOnEdge = Math.floor(index / 4);
-          const totalOnEdge = Math.ceil(filteredRecipes.length / 4);
-          const progress = totalOnEdge > 1 ? positionOnEdge / (totalOnEdge - 1) : 0.5;
-          
-          let x, y, rotation;
-          
-          switch (edgeIndex) {
-            case 0: // Bord haut
-              x = 10 + (progress * 80); // De 10% à 90%
-              y = -5 + (Math.random() * edgeZone); // Entre -5% et edgeZone%
-              rotation = (Math.random() * 20 - 10); // Entre -10° et +10°
-              break;
-              
-            case 1: // Bord droite
-              x = 100 - edgeZone + (Math.random() * edgeZone); // Entre 100-edgeZone% et 100%
-              y = 10 + (progress * 80); // De 10% à 90%
-              rotation = 90 + (Math.random() * 20 - 10); // Rotation verticale avec variation
-              break;
-              
-            case 2: // Bord bas
-              x = 10 + (progress * 80); // De 10% à 90%
-              y = 100 - edgeZone + (Math.random() * edgeZone); // Entre 100-edgeZone% et 100%
-              rotation = 180 + (Math.random() * 20 - 10); // Rotation inversée avec variation
-              break;
-              
-            case 3: // Bord gauche
-              x = -5 + (Math.random() * edgeZone); // Entre -5% et edgeZone%
-              y = 10 + (progress * 80); // De 10% à 90%
-              rotation = 270 + (Math.random() * 20 - 10); // Rotation verticale inversée avec variation
-              break;
-              
-            default:
-              x = 50;
-              y = 50;
-              rotation = 0;
-          }
-          
-          return {
-            image: recipe.thumbnail,
-            title: recipe.title,
-            id: recipe.id,
-            x: x,
-            y: y,
-            rotation: rotation
-          };
-        });
-        setPolaroidImages(imagesWithTitles);
-      } catch (error) {
-        console.error('Erreur chargement images polaroïd:', error);
-      }
-    };
-    loadPolaroidImages();
-  }, []);
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!prompt.trim() || !apiConfigured || isGenerating) return;
@@ -208,33 +139,6 @@ export default function HomePage({ onGenerate, onOpenSettings, onOpenSaved, isGe
 
   return (
     <div className="home-page">
-      {/* Fond polaroïd */}
-      {polaroidImages.length > 0 && (
-        <div className="polaroid-background">
-          {polaroidImages.map((item, index) => (
-            <div
-              key={item.id || index}
-              className="polaroid-item"
-              style={{
-                '--rotation': `${item.rotation}deg`,
-                '--x': `${item.x}%`,
-                '--y': `${item.y}%`,
-                '--delay': `${index * 0.05}s`
-              }}
-            >
-              <div className="polaroid-image-wrapper">
-                <img 
-                  src={item.image} 
-                  alt={item.title}
-                  className="polaroid-image"
-                  loading="lazy"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* Header */}
       <header className="home-header">
         <div className="header-actions">

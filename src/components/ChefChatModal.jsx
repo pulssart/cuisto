@@ -6,10 +6,9 @@ import './ChefChatModal.css';
 // Fonction pour formater le markdown (gras, italique, etc.)
 function formatMessage(text) {
   if (!text) return '';
-  
+
   // Convertir le markdown en éléments React
   const parts = [];
-  let currentIndex = 0;
   
   // Regex pour **gras** et *italique*
   const boldRegex = /\*\*(.+?)\*\*/g;
