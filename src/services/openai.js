@@ -419,12 +419,26 @@ export function extractShoppingList(recipe) {
  */
 export async function generateRandomRecipeIdea() {
   const apiKey = getApiKey();
-  
+
   if (!apiKey) {
     throw new Error('Clé API OpenAI non configurée');
   }
 
-  const systemPrompt = `Tu es un chef cuisinier créatif. Génère une idée de recette originale et appétissante en une seule phrase.
+  // 80% des idées doivent être simples et accessibles
+  const easyMode = Math.random() < 0.8;
+
+  const systemPrompt = easyMode
+    ? `Tu es un chef pédagogue qui propose des recettes simples et rapides. Génère une idée de recette facile en une seule phrase.
+L'idée doit utiliser des ingrédients courants, être réalisable en moins de 45 minutes et ne requérir que du matériel standard.
+
+IMPORTANT - Accessibilité requise:
+- Évite les techniques avancées et les préparations complexes
+- Privilégie les plats familiaux ou du quotidien (pâtes gourmandes, sautés, salades composées, plats mijotés simples, desserts rapides)
+- Mentionne si possible une astuce pour gagner du temps ou une substitution courante
+- Limite le nombre d'ingrédients originaux
+
+Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`
+    : `Tu es un chef cuisinier créatif. Génère une idée de recette originale et appétissante en une seule phrase.
 L'idée doit être inspirante, avec des ingrédients intéressants et une description qui donne envie.
 
 IMPORTANT - Diversité requise:
@@ -444,7 +458,9 @@ Exemples de format variés:
 
 Réponds UNIQUEMENT avec l'idée de recette, sans introduction ni explication.`;
 
-  const userPrompt = `Génère une idée de recette aléatoire, créative et appétissante. Varie les catégories (entrée/plat/dessert), les cuisines et les techniques. Évite les recettes trop populaires comme curry ou tacos.`;
+  const userPrompt = easyMode
+    ? `Génère une idée de recette aléatoire, facile et appétissante. Vise un temps total inférieur à 45 minutes, des ingrédients disponibles en supermarché et des instructions simples.`
+    : `Génère une idée de recette aléatoire, créative et appétissante. Varie les catégories (entrée/plat/dessert), les cuisines et les techniques. Évite les recettes trop populaires comme curry ou tacos.`;
 
   try {
     const response = await fetch(`${API_URL}/chat/completions`, {
