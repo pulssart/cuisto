@@ -424,11 +424,13 @@ export async function generateRandomRecipeIdea() {
     throw new Error('Clé API OpenAI non configurée');
   }
 
-  // 80% des idées doivent être simples et accessibles
-  const easyMode = Math.random() < 0.8;
+  // 85% des idées doivent rester simples et accessibles, mais avec des niveaux de créativité variés
+  const randomValue = Math.random();
+  const mode = randomValue < 0.6 ? 'easy' : randomValue < 0.85 ? 'creative_easy' : 'creative';
 
-  const systemPrompt = easyMode
-    ? `Tu es un chef pédagogue qui propose des recettes simples et rapides. Génère une idée de recette facile en une seule phrase.
+  const systemPrompt =
+    mode === 'easy'
+      ? `Tu es un chef pédagogue qui propose des recettes simples et rapides. Génère une idée de recette facile en une seule phrase.
 L'idée doit utiliser des ingrédients courants, être réalisable en moins de 45 minutes et ne requérir que du matériel standard.
 
 IMPORTANT - Accessibilité requise:
@@ -441,7 +443,21 @@ Format de réponse obligatoire:
 - Donne uniquement un nom ou une idée de recette (comme un intitulé), sans aucune instruction ni formulation à l'impératif
 - Pas d'étapes, pas de consignes, pas de verbes d'action dirigés vers l'utilisateur
 - Pas d'introduction ni d'explication, juste l'idée elle-même.`
-    : `Tu es un chef cuisinier créatif. Génère une idée de recette originale et appétissante en une seule phrase.
+      : mode === 'creative_easy'
+        ? `Tu es un chef inventif mais accessible. Génère une idée de recette originale, facile à réaliser et appétissante en une seule phrase.
+L'idée doit surprendre par les associations d'ingrédients tout en restant faisable en moins de 60 minutes avec des techniques simples.
+
+IMPORTANT - Créativité accessible:
+- Combine un ingrédient original avec des produits courants
+- Évite le matériel professionnel et les techniques avancées
+- Vise une liste d'ingrédients courte et disponible en supermarché
+- Mets en avant une touche créative (épice, herbe fraîche, présentation)
+
+Format de réponse obligatoire:
+- Donne uniquement un nom ou une idée de recette (comme un intitulé), sans aucune instruction ni formulation à l'impératif
+- Pas d'étapes, pas de consignes, pas de verbes d'action dirigés vers l'utilisateur
+- Pas d'introduction ni d'explication, juste l'idée elle-même.`
+        : `Tu es un chef cuisinier créatif. Génère une idée de recette originale et appétissante en une seule phrase.
 L'idée doit être inspirante, avec des ingrédients intéressants et une description qui donne envie.
 
 IMPORTANT - Diversité requise:
@@ -464,9 +480,12 @@ Format de réponse obligatoire:
 - Pas d'étapes, pas de consignes, pas de verbes d'action dirigés vers l'utilisateur
 - Pas d'introduction ni d'explication, juste l'idée elle-même.`;
 
-  const userPrompt = easyMode
-    ? `Génère une idée de recette aléatoire, facile et appétissante. Vise un temps total inférieur à 45 minutes, des ingrédients disponibles en supermarché et des instructions simples.`
-    : `Génère une idée de recette aléatoire, créative et appétissante. Varie les catégories (entrée/plat/dessert), les cuisines et les techniques. Évite les recettes trop populaires comme curry ou tacos.`;
+  const userPrompt =
+    mode === 'easy'
+      ? `Génère une idée de recette aléatoire, facile et appétissante. Vise un temps total inférieur à 45 minutes, des ingrédients disponibles en supermarché et des instructions simples.`
+      : mode === 'creative_easy'
+        ? `Génère une idée de recette aléatoire, créative mais facile. Propose une association originale tout en restant réalisable rapidement avec des ingrédients accessibles.`
+        : `Génère une idée de recette aléatoire, créative et appétissante. Varie les catégories (entrée/plat/dessert), les cuisines et les techniques. Évite les recettes trop populaires comme curry ou tacos.`;
 
   try {
     const response = await fetch(`${API_URL}/chat/completions`, {
