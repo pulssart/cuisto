@@ -193,7 +193,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       }
     }
 
-    const shareText = `${recipe.title}\n\n${summary}\n\nCréé avec l’app Cuisto`;
+    const shareText = `${recipe.title}\n\n${summary}\n\nRecette créée par la cuisto`;
     const shareData = {
       title: recipe.title,
       text: shareText,
