@@ -9,7 +9,7 @@ import {
   CloseIcon
 } from './icons';
 import { saveRecipe } from '../services/storage';
-import { generateChefAudio } from '../services/openai';
+import { generateChefAudio, summarizeRecipeForShare } from '../services/openai';
 import ShoppingListModal from './ShoppingListModal';
 import ChefChatModal from './ChefChatModal';
 import './RecipeView.css';
@@ -23,6 +23,8 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false);
   const [isChefChatOpen, setIsChefChatOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [shareSummary, setShareSummary] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
   
   // États pour l'audio du chef
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
@@ -39,6 +41,8 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     setIsSaved(!!recipe.id);
     setIsImageFullscreen(false);
     setSelectedStepIllustration(null);
+    setShareSummary('');
+    setIsSharing(false);
     // Reset audio state
     setIsPlayingAudio(false);
     setIsLoadingAudio(false);
@@ -174,7 +178,22 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
       return;
     }
 
-    const shareText = `${recipe.title} - créé avec l’app Cuisto`;
+    setIsSharing(true);
+    let summary = shareSummary;
+
+    if (!summary) {
+      try {
+        summary = await summarizeRecipeForShare(recipe);
+        setShareSummary(summary);
+      } catch (error) {
+        console.error('Erreur lors de la génération du résumé de partage:', error);
+        alert(error.message || 'Impossible de générer le résumé de la recette.');
+        setIsSharing(false);
+        return;
+      }
+    }
+
+    const shareText = `${recipe.title}\n\n${summary}\n\nCréé avec l’app Cuisto`;
     const shareData = {
       title: recipe.title,
       text: shareText,
@@ -205,6 +224,8 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
         console.error('Erreur de partage:', error);
         alert('Impossible de partager la recette.');
       }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -360,8 +381,13 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
             className="btn-secondary share-btn"
             onClick={handleShare}
             aria-label="Partager la recette"
+            disabled={isSharing}
           >
-            📤 Partager
+            {isSharing ? (
+              <><span className="btn-spinner"></span> Préparation du partage...</>
+            ) : (
+              <>📤 Partager</>
+            )}
           </button>
           <button
             className="btn-secondary print-btn"

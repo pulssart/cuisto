@@ -118,6 +118,78 @@ Sois précis dans les quantités et les temps de cuisson.`;
 }
 
 /**
+ * Génère un résumé court d'une recette pour le partage
+ * @param {Object} recipe - La recette à résumer
+ * @returns {Promise<string>} Un résumé de quelques lignes
+ */
+export async function summarizeRecipeForShare(recipe) {
+  const apiKey = getApiKey();
+
+  if (!apiKey) {
+    throw new Error('Clé API OpenAI non configurée. Veuillez la configurer dans les paramètres.');
+  }
+
+  const systemPrompt = `Tu es un chef cuisinier qui prépare un texte de partage accrocheur.
+Tu dois produire un résumé vivant et concis (3 à 4 phrases maximum) qui donne envie de réaliser la recette.
+Mentionne le nom du plat, les saveurs clés, les temps forts de la préparation et le résultat final.
+Écris en français, ton chaleureux et dynamique. Pas de listes ni d'émojis.`;
+
+  const { title, category, servings, prepTime, cookTime, restTime, ingredients, instructions, chefComment } = recipe;
+
+  const ingredientsText = ingredients
+    ?.map((section) => `${section.section ? `${section.section}: ` : ''}${section.items?.join(', ')}`)
+    .join(' | ');
+
+  const instructionsText = instructions
+    ?.map((step) => (typeof step === 'string' ? step : step.text))
+    .join(' ');
+
+  const userPrompt = `Titre: ${title}
+Catégorie: ${category || 'Non spécifiée'}
+Portions: ${servings || 'Non spécifiées'}
+Préparation: ${prepTime || 'Non spécifiée'}, Cuisson: ${cookTime || '0 min'}, Repos: ${restTime || '0 min'}
+Ingrédients: ${ingredientsText || 'Non renseignés'}
+Étapes principales: ${instructionsText || 'Non renseignées'}
+Commentaire du chef: ${chefComment || 'Non fourni'}`;
+
+  try {
+    const response = await fetch(`${API_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: TEXT_MODEL,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.6,
+        max_tokens: 200,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Erreur lors de la génération du résumé');
+    }
+
+    const data = await response.json();
+    const summary = data.choices[0].message.content?.trim();
+
+    if (!summary) {
+      throw new Error('Résumé indisponible');
+    }
+
+    return summary;
+  } catch (error) {
+    console.error('Erreur OpenAI (résumé):', error);
+    throw error;
+  }
+}
+
+/**
  * Génère une image pour une recette (photo du plat)
  * @param {string} imagePrompt - Le prompt de description de l'image
  * @returns {Promise<string>} L'URL de l'image en base64
