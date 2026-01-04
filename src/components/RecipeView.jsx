@@ -168,6 +168,46 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
     setSelectedStepIllustration(null);
   };
 
+  const handleShare = async () => {
+    if (!navigator.share) {
+      alert("Le partage n'est pas supporté sur cet appareil");
+      return;
+    }
+
+    const shareText = `${recipe.title} - créé avec l’app Cuisto`;
+    const shareData = {
+      title: recipe.title,
+      text: shareText,
+    };
+
+    if (displayImage) {
+      try {
+        const response = await fetch(displayImage);
+        const blob = await response.blob();
+        const fileExtension = blob.type.split('/')[1] || 'jpg';
+        const safeTitle = recipe.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const imageFile = new File([blob], `${safeTitle || 'recette'}.${fileExtension}`, {
+          type: blob.type || 'image/jpeg',
+        });
+
+        if (navigator.canShare?.({ files: [imageFile] })) {
+          shareData.files = [imageFile];
+        }
+      } catch (error) {
+        console.error('Erreur lors du partage de l\'image:', error);
+      }
+    }
+
+    try {
+      await navigator.share(shareData);
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('Erreur de partage:', error);
+        alert('Impossible de partager la recette.');
+      }
+    }
+  };
+
   // Gestion du retour avec confirmation si recette non sauvegardée
   const handleBackClick = () => {
     if (!isSaved) {
@@ -301,7 +341,7 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
             💬 Discuter avec le Chef
           </button>
           {recipe.chefComment && (
-            <button 
+            <button
               className={`btn-secondary chef-btn ${isPlayingAudio ? 'playing' : ''}`}
               onClick={handlePlayChefComment}
               disabled={isLoadingAudio}
@@ -316,14 +356,21 @@ export default function RecipeView({ recipe, onBack, onSaved }) {
               )}
             </button>
           )}
-          <button 
+          <button
+            className="btn-secondary share-btn"
+            onClick={handleShare}
+            aria-label="Partager la recette"
+          >
+            📤 Partager
+          </button>
+          <button
             className="btn-secondary print-btn"
             onClick={handlePrint}
             aria-label="Imprimer la recette"
           >
             🖨️ Imprimer
           </button>
-          <button 
+          <button
             className={`btn-icon save-btn ${isSaved ? 'saved' : ''}`}
             onClick={handleSave}
             disabled={isSaved || saving}
