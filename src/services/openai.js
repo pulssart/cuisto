@@ -166,7 +166,7 @@ Commentaire du chef: ${chefComment || 'Non fourni'}`;
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.6,
-        max_tokens: 200,
+        max_completion_tokens: 200,
       }),
     });
 
@@ -573,7 +573,7 @@ Format de réponse obligatoire:
           { role: 'user', content: userPrompt },
         ],
         temperature: 1.4, // Température très élevée pour plus de créativité et diversité
-        max_tokens: 60, // Un peu plus de tokens pour des descriptions plus variées
+        max_completion_tokens: 60, // Un peu plus de tokens pour des descriptions plus variées
       }),
     });
 
@@ -665,7 +665,7 @@ Réponds uniquement en français.`;
         model: 'gpt-4o-mini', // Modèle économique pour le chat
         messages: apiMessages,
         temperature: 0.7,
-        max_tokens: 500,
+        max_completion_tokens: 500,
       }),
     });
 
